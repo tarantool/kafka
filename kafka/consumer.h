@@ -36,6 +36,10 @@ int lua_consumer_subscribe(struct lua_State *L);
 
 int lua_consumer_unsubscribe(struct lua_State *L);
 
+int lua_consumer_pause(struct lua_State *L);
+
+int lua_consumer_resume(struct lua_State *L);
+
 int lua_consumer_tostring(struct lua_State *L);
 
 int lua_consumer_poll_msg(struct lua_State *L);

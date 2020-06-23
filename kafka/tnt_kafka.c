@@ -19,6 +19,8 @@ luaopen_kafka_tntkafka(lua_State *L) {
     static const struct luaL_Reg consumer_methods [] = {
             {"subscribe", lua_consumer_subscribe},
             {"unsubscribe", lua_consumer_unsubscribe},
+            {"pause", lua_consumer_pause},
+            {"resume", lua_consumer_resume},
             {"poll_msg", lua_consumer_poll_msg},
             {"poll_logs", lua_consumer_poll_logs},
             {"poll_errors", lua_consumer_poll_errors},

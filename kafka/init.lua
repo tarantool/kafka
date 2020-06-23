@@ -161,6 +161,14 @@ function Consumer:close()
     return ok, err
 end
 
+function Consumer:pause(topics)
+    return self._consumer:pause(topics)
+end
+
+function Consumer:resume(topics)
+    return self._consumer.resume(topics)
+end
+
 function Consumer:subscribe(topics)
     return self._consumer:subscribe(topics)
 end
