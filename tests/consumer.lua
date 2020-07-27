@@ -10,7 +10,7 @@ local errors = {}
 local logs = {}
 local rebalances = {}
 
-local function create(brokers, additional_opts)
+local function create(brokers, options)
     local err
     errors = {}
     logs = {}
@@ -28,18 +28,15 @@ local function create(brokers, additional_opts)
         log.info("got rebalance msg: %s", json.encode(msg))
         table.insert(rebalances, msg)
     end
-
-    local options = {
+    local default_options = {
         ["enable.auto.offset.store"] = "false",
         ["group.id"] = "test_consumer",
         ["auto.offset.reset"] = "earliest",
         ["enable.partition.eof"] = "false",
         ["log_level"] = "7",
     }
-    if additional_opts ~= nil then
-        for key, value in pairs(additional_opts) do
-            options[key] = value
-        end
+    for key, value in pairs(options or {}) do
+        default_options[key] = value
     end
     consumer, err = tnt_kafka.Consumer.create({
         brokers = brokers,
