@@ -1,8 +1,8 @@
 import time
 import asyncio
+from kafka import KafkaProducer
 from contextlib import contextmanager
 
-from aiokafka import AIOKafkaProducer
 import tarantool
 
 
@@ -27,27 +27,15 @@ def create_consumer(server, *args):
 
 
 def write_into_kafka(topic, messages):
-    loop = asyncio.get_event_loop()
+    producer = KafkaProducer()
+    futures = []
+    for msg in messages:
+        futures.append(producer.send(topic,
+                                     key=msg['key'].encode('utf-8'),
+                                     value=msg['value'].encode('utf-8')))
 
-    async def send():
-        producer = AIOKafkaProducer(
-            loop=loop, bootstrap_servers='localhost:9092')
-        # Get cluster layout and initial topic/partition leadership information
-        await producer.start()
-        try:
-            # Produce message
-            for msg in messages:
-                await producer.send_and_wait(
-                    topic,
-                    value=msg['value'].encode('utf-8'),
-                    key=msg['key'].encode('utf-8')
-                )
-
-        finally:
-            # Wait for all pending messages to be delivered or expire.
-            await producer.stop()
-
-    loop.run_until_complete(send())
+    for future in futures:
+        future.get(1)
 
 
 def test_consumer_should_consume_msgs():

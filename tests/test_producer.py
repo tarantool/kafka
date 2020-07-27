@@ -1,7 +1,6 @@
 import time
-import asyncio
 
-from aiokafka import AIOKafkaConsumer
+from kafka import KafkaConsumer
 import tarantool
 
 
@@ -15,11 +14,28 @@ def get_server():
                                 connect_now=True)
 
 
+def wait(fn, *args, timeout=10):
+    end = time.time() + timeout
+    resp = None
+    while time.time() < end:
+        try:
+            resp = fn(*args)
+            break
+        except Exception:
+            time.sleep(0.1)
+
+    return resp
+
+
 def test_producer_should_produce_msgs():
+    consumer = KafkaConsumer(
+        'test_producer',
+        group_id="test_group",
+        auto_offset_reset="latest",
+    )
+
     server = get_server()
-
     server.call("producer.create", ["kafka:9092"])
-
     server.call("producer.produce", (
         (
             "1",
@@ -28,54 +44,36 @@ def test_producer_should_produce_msgs():
         ),
     ))
 
-    loop = asyncio.get_event_loop()
+    def gather_messages(messages):
+        response = consumer.poll(500)
+        result = list(response.values()).pop()
+        for m in result:
+            messages.append({
+                'key':   m.key if m.key is None else m.key.decode('utf8'),
+                'value': m.value if m.value is None else m.value.decode('utf8')
+            })
+        if len(messages) < 3:
+            raise RuntimeError("Not enough messages yet")
+        return messages
 
-    async def test():
-        kafka_output = []
-        async def consume():
-            consumer = AIOKafkaConsumer(
-                'test_producer',
-                group_id="test_group",
-                loop=loop,
-                bootstrap_servers='localhost:9092',
-                auto_offset_reset="earliest",
-            )
-            # Get cluster layout
-            await consumer.start()
+    kafka_output = wait(gather_messages, [])
 
-            try:
-                # Consume messages
-                async for msg in consumer:
-                    kafka_output.append({
-                        'key': msg.key if msg.key is None else msg.key.decode('utf8'),
-                        'value': msg.value if msg.value is None else msg.value.decode('utf8')
-                    })
+    consumer.commit()
 
-            finally:
-                # Will leave consumer group; perform autocommit if enabled.
-                await consumer.stop()
-
-        try:
-            await asyncio.wait_for(consume(), 10, loop=loop)
-        except asyncio.TimeoutError:
-            pass
-
-        assert kafka_output == [
-            {
-                "key": "1",
-                "value": "1"
-            },
-            {
-                "key": "2",
-                "value": "2"
-            },
-            {
-                "key": "3",
-                "value": "3"
-            },
-        ]
-
-    loop.run_until_complete(test())
+    assert kafka_output == [
+        {
+            "key": "1",
+            "value": "1"
+        },
+        {
+            "key": "2",
+            "value": "2"
+        },
+        {
+            "key": "3",
+            "value": "3"
+        },
+    ]
 
     server.call("producer.close", [])
 
