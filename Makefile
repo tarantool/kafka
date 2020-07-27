@@ -18,7 +18,7 @@ docker-run-zoo: docker-remove-zoo
         confluentinc/cp-zookeeper:5.0.0
 
 docker-remove-kafka:
-	docker rm -f kafka || true
+	docker rm -f kafka --volumes || true
 
 docker-pull-kafka:
 	docker pull wurstmeister/kafka
@@ -104,10 +104,10 @@ test-run-with-docker: tests-dep docker-run-all
 	sleep 10
 
 	docker run \
-    		--net=${NETWORK} \
-    		--rm confluentinc/cp-kafka:5.0.0 \
-    		kafka-topics --create --topic test_producer --partitions 1 --replication-factor 1 \
-    		--if-not-exists --zookeeper zookeeper:2181
+		--net=${NETWORK} \
+		--rm confluentinc/cp-kafka:5.0.0 \
+		kafka-topics --create --topic test_producer --partitions 1 --replication-factor 1 \
+		--if-not-exists --zookeeper zookeeper:2181
 
 	docker run \
 		--net=${NETWORK} \
@@ -150,12 +150,6 @@ test-run-with-docker: tests-dep docker-run-all
 		--rm confluentinc/cp-kafka:5.0.0 \
 		kafka-topics --create --topic test_consuming_from_last_committed_offset --partitions 1 --replication-factor 1 \
 		--if-not-exists --zookeeper zookeeper:2181
-
-	cd ./tests && \
-		python3 -m venv venv && \
-		. venv/bin/activate && \
-		pip install -r requirements.txt && \
-		deactivate
 
 	cd ./tests && \
 		. venv/bin/activate && \
