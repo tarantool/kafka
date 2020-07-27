@@ -52,7 +52,7 @@ local function produce(messages)
         if err ~= nil then
             log.error("got error '%s' while sending value '%s'", err, message)
         else
-            log.error("successfully sent value '%s'", message)
+            log.info("successfully sent value '%s'", message)
         end
     end
 end

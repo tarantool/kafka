@@ -98,7 +98,7 @@ local function consume(timeout)
                 table.insert(consumed, msg:value())
                 local err = consumer:store_offset(msg)
                 if err ~= nil then
-                    log.error("got error '%s' while commiting msg from topic '%s'", err, msg:topic())
+                    log.error("got error '%s' while committing msg from topic '%s'", err, msg:topic())
                 end
             end
         end
