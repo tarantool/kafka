@@ -274,6 +274,22 @@ function Producer:produce_async(msg)
     return err
 end
 
+function Producer:init_transactions(timeout)
+    return self._producer:init_transactions(timeout)
+end
+
+function Producer:begin_transaction()
+    return self._producer:begin_transaction()
+end
+
+function Producer:commit_transaction(timeout)
+    return self._producer:commit_transaction(timeout)
+end
+
+function Producer:abort_transaction(timeout)
+    return self._producer:abort_transaction(timeout)
+end
+
 local function dr_callback_factory(delivery_chan)
     return function(err)
         delivery_chan:put(err)

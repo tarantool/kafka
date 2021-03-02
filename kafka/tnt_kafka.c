@@ -64,6 +64,10 @@ luaopen_kafka_tntkafka(lua_State *L) {
             {"poll_errors", lua_producer_poll_errors},
             {"close", lua_producer_close},
             {"destroy", lua_producer_destroy},
+            {"init_transactions", lua_producer_init_transactions},
+            {"begin_transaction", lua_producer_begin_transaction},
+            {"commit_transaction", lua_producer_commit_transaction},
+            {"abort_transaction", lua_producer_abort_transaction},
             {"__tostring", lua_producer_tostring},
             {NULL, NULL}
     };

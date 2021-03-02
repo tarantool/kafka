@@ -441,6 +441,49 @@ destroy_producer(struct lua_State *L, producer_t *producer) {
     free(producer);
 }
 
+static ssize_t
+producer_init_transactions(va_list args) {
+	rd_kafka_t *rd_producer = va_arg(args, rd_kafka_t *);
+	int timeout_ms = va_arg(args, int);
+	rd_kafka_error_t **ret_err = va_arg(args, rd_kafka_error_t **);
+
+	rd_kafka_error_t *err = rd_kafka_init_transactions(rd_producer, timeout_ms);
+	if (err != NULL) {
+		*ret_err = err;
+	}
+	return 0;
+}
+
+static ssize_t
+producer_begin_transaction(va_list args) {
+	rd_kafka_t *rd_producer = va_arg(args, rd_kafka_t *);
+	rd_kafka_error_t **ret_err = va_arg(args, rd_kafka_error_t **);
+
+	rd_kafka_error_t *err = rd_kafka_begin_transaction(rd_producer);
+	if (err != NULL) {
+		*ret_err = err;
+	}
+	return 0;
+}
+
+static ssize_t
+producer_commit_transaction(va_list args) {
+	rd_kafka_t *rd_producer = va_arg(args, rd_kafka_t *);
+	int timeout_ms = va_arg(args, int);
+	rd_kafka_error_t *err = rd_kafka_commit_transaction(rd_producer, timeout_ms);
+	(void)err;
+	return 0;
+}
+
+static ssize_t
+producer_abort_transaction(va_list args) {
+	rd_kafka_t *rd_producer = va_arg(args, rd_kafka_t *);
+	int timeout_ms = va_arg(args, int);
+	rd_kafka_error_t *err = rd_kafka_abort_transaction(rd_producer, timeout_ms);
+	(void)err;
+	return 0;
+}
+
 int
 lua_producer_close(struct lua_State *L) {
     producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
@@ -471,6 +514,123 @@ lua_producer_destroy(struct lua_State *L) {
     if (producer_p)
         *producer_p = NULL;
     return 0;
+}
+
+int
+lua_producer_init_transactions(struct lua_State *L)
+{
+	if (lua_gettop(L) != 2)
+		luaL_error(L, "Usage: ok, err = producer:init_transactions(timeout_ms)");
+
+	producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+	if (producer_p == NULL || *producer_p == NULL) {
+		lua_pushboolean(L, 0);
+		lua_pushliteral(L, "Not a producer");
+		return 2;
+	}
+
+	int timeout_ms = luaL_checkinteger(L, 2);
+
+	if ((*producer_p)->rd_producer != NULL) {
+		rd_kafka_error_t *err = NULL;
+		coio_call(producer_init_transactions, (*producer_p)->rd_producer, timeout_ms, &err);
+
+		if (err != NULL) {
+			lua_pushboolean(L, 0);
+			lua_pushstring(L, rd_kafka_error_string(err));
+			rd_kafka_error_destroy(err);
+			return 2;
+		}
+	}
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+int
+lua_producer_begin_transaction(struct lua_State *L)
+{
+	producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+	if (producer_p == NULL || *producer_p == NULL) {
+		lua_pushboolean(L, 0);
+		lua_pushliteral(L, "Not a producer");
+		return 2;
+	}
+
+	if ((*producer_p)->rd_producer != NULL) {
+		rd_kafka_error_t *err = NULL;
+		coio_call(producer_begin_transaction, (*producer_p)->rd_producer, &err);
+
+		if (err != NULL) {
+			lua_pushboolean(L, 0);
+			lua_pushstring(L, rd_kafka_error_string(err));
+			rd_kafka_error_destroy(err);
+			return 2;
+		}
+	}
+
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+int
+lua_producer_commit_transaction(struct lua_State *L)
+{
+	if (lua_gettop(L) != 2)
+		luaL_error(L, "Usage: ok, err = producer:commit_transaction(timeout_ms)");
+
+	producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+	if (producer_p == NULL || *producer_p == NULL) {
+		lua_pushboolean(L, 0);
+		lua_pushliteral(L, "Not a producer");
+		return 2;
+	}
+
+	int timeout_ms = luaL_checkinteger(L, 2);
+
+	if ((*producer_p)->rd_producer != NULL) {
+		rd_kafka_error_t *err = NULL;
+		coio_call(producer_commit_transaction, (*producer_p)->rd_producer, timeout_ms, &err);
+
+		if (err != NULL) {
+			lua_pushboolean(L, 0);
+			lua_pushstring(L, rd_kafka_error_string(err));
+			rd_kafka_error_destroy(err);
+			return 2;
+		}
+	}
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+int
+lua_producer_abort_transaction(struct lua_State *L)
+{
+	if (lua_gettop(L) != 2)
+		luaL_error(L, "Usage: ok, err = producer:abort_transaction(timeout_ms)");
+
+	producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+	if (producer_p == NULL || *producer_p == NULL) {
+		lua_pushboolean(L, 0);
+		lua_pushliteral(L, "Not a producer");
+		return 2;
+	}
+
+	int timeout_ms = luaL_checkinteger(L, 2);
+
+	if ((*producer_p)->rd_producer != NULL) {
+		rd_kafka_error_t *err = NULL;
+		coio_call(producer_abort_transaction, (*producer_p)->rd_producer, timeout_ms, &err);
+
+		if (err != NULL) {
+			lua_pushboolean(L, 0);
+			lua_pushstring(L, rd_kafka_error_string(err));
+			rd_kafka_error_destroy(err);
+			return 2;
+		}
+	}
+
+	lua_pushboolean(L, 1);
+	return 1;
 }
 
 int

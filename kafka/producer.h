@@ -59,4 +59,12 @@ int lua_create_producer(struct lua_State *L);
 
 int lua_producer_destroy(struct lua_State *L);
 
+int lua_producer_init_transactions(struct lua_State *L);
+
+int lua_producer_begin_transaction(struct lua_State *L);
+
+int lua_producer_commit_transaction(struct lua_State *L);
+
+int lua_producer_abort_transaction(struct lua_State *L);
+
 #endif //TNT_KAFKA_PRODUCER_H

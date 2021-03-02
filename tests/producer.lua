@@ -1,7 +1,5 @@
-local os = require('os')
 local box = require('box')
 local log = require('log')
-local fiber = require('fiber')
 local tnt_kafka = require('kafka')
 
 local TOPIC_NAME = "test_producer"
@@ -57,6 +55,22 @@ local function produce(messages)
     end
 end
 
+local function init_transactions(timeout_ms)
+    return producer:init_transactions(timeout_ms)
+end
+
+local function begin_transaction()
+    return producer:begin_transaction()
+end
+
+local function commit_transaction(timeout_ms)
+    return producer:commit_transaction(timeout_ms)
+end
+
+local function abort_transaction(timeout_ms)
+    return producer:abort_transaction(timeout_ms)
+end
+
 local function get_errors()
     return errors
 end
@@ -79,4 +93,9 @@ return {
     get_errors = get_errors,
     get_logs = get_logs,
     close = close,
+
+    init_transactions = init_transactions,
+    begin_transaction = begin_transaction,
+    commit_transaction = commit_transaction,
+    abort_transaction = abort_transaction,
 }
