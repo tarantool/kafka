@@ -130,7 +130,7 @@ lua_consumer_msg_print(msg_t *msg) {
         }
     }
 
-    printf("Kafka Consumer Message: topic=%s partition=%d offset=%lld key=%s value=%s\n",
+    printf("Kafka Consumer Message: topic=%s partition=%d offset=%ld key=%s value=%s\n",
            rd_kafka_topic_name(msg->topic),
            msg->partition,
            msg->offset,
