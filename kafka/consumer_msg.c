@@ -130,7 +130,12 @@ lua_consumer_msg_print(msg_t *msg) {
         }
     }
 
-    printf("Kafka Consumer Message: topic=%s partition=%d offset=%ld key=%s value=%s\n",
+#ifdef __APPLE__
+#define PRI64 "lld"
+#else
+#define PRI64 "ld"
+#endif
+    printf("Kafka Consumer Message: topic=%s partition=%d offset=%"PRI64" key=%s value=%s\n",
            rd_kafka_topic_name(msg->topic),
            msg->partition,
            msg->offset,

@@ -550,6 +550,10 @@ consumer_destroy(struct lua_State *L, consumer_t *consumer) {
     }
 
     if (consumer->event_queues != NULL) {
+        if (consumer->event_queues->consume_queue != NULL)
+            if (consumer->event_queues->consume_queue->count > 0)
+                printf("kafka: WARNING message queue is not empty when destroy\n");
+
         destroy_event_queues(L, consumer->event_queues);
     }
 
