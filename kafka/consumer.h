@@ -54,4 +54,6 @@ int lua_consumer_destroy(struct lua_State *L);
 
 int lua_create_consumer(struct lua_State *L);
 
+void
+lua_consumer_msg_print(msg_t *msg);
 #endif //TNT_KAFKA_CONSUMER_H

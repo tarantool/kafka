@@ -104,6 +104,40 @@ lua_consumer_msg_tostring(struct lua_State *L) {
     return 1;
 }
 
+void
+lua_consumer_msg_print(msg_t *msg) {
+    size_t key_len = msg->key_len <= 0 ? 5: msg->key_len + 1;
+    char key[key_len];
+
+    if (msg->key_len <= 0 || msg->key == NULL || ((char*)msg->key) == NULL) {
+        strncpy(key, "NULL", 5);
+    } else {
+        strncpy(key, msg->key, msg->key_len + 1);
+        if (key[msg->key_len] != '\0') {
+            key[msg->key_len] = '\0';
+        }
+    }
+
+    size_t value_len = msg->value_len <= 0 ? 5: msg->value_len + 1;
+    char value[value_len];
+
+    if (msg->value_len <= 0 || msg->value == NULL || ((char*)msg->value) == NULL) {
+        strncpy(value, "NULL", 5);
+    } else {
+        strncpy(value, msg->value, msg->value_len + 1);
+        if (value[msg->value_len] != '\0') {
+            value[msg->value_len] = '\0';
+        }
+    }
+
+    printf("Kafka Consumer Message: topic=%s partition=%d offset=%lld key=%s value=%s\n",
+           rd_kafka_topic_name(msg->topic),
+           msg->partition,
+           msg->offset,
+           key,
+           value);
+}
+
 int
 lua_consumer_msg_gc(struct lua_State *L) {
     msg_t **msg_p = (msg_t **)luaL_checkudata(L, 1, consumer_msg_label);

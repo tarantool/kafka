@@ -44,12 +44,17 @@ consumer_poll_loop(void *arg) {
             if (rd_msg != NULL) {
                 if (rd_msg->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
                     // FIXME: push errors to error queue?
+                    printf("kafka: %s\n", rd_kafka_err2str(rd_msg->err));
                     rd_kafka_message_destroy(rd_msg);
                 } else {
                     msg_t *msg = new_consumer_msg(rd_msg);
                     // free rdkafka message instantly to prevent hang on close / destroy consumer
                     rd_kafka_message_destroy(rd_msg);
                     rd_msg = NULL;
+
+                    const char* s = getenv("TARANTOOL_KAFKA_PRINT_MSG");
+                    if (s != NULL)
+                        lua_consumer_msg_print(msg);
 
                     pthread_mutex_lock(&event_queues->consume_queue->lock);
 
