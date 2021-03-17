@@ -246,3 +246,14 @@ You can run docker based integration tests via makefile target
 ```bash
     make test-run-with-docker
 ```
+
+## Building
+
+### centos:7 docker based static build
+
+``` bash
+docker build -t kafka -f Dockerfile.staticbuild .
+docker create --name kafka -it --rm kafka
+docker cp kafka:/kafka/kafka-scm-1.linux-x86_64.rock .
+docker rm -f kafka
+```
