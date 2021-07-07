@@ -18,7 +18,7 @@ if(${tntver} VERSION_LESS 1.7.4.291)
     message(FATAL_ERROR "Tarantool >= 1.7.4-291 is required")
 endif()
 
-set(STATIC_BUILD "OFF", CACHE BOOL "Link dependencies statically?")
+set(STATIC_BUILD "OFF" CACHE BOOL "Link dependencies statically?")
 set(WITH_OPENSSL_1_1 "OFF" CACHE BOOL "Require openssl version >= 1.1?")
 
 if (WITH_OPENSSL_1_1)
@@ -31,17 +31,15 @@ message("Found OPENSSL version: ${OPENSSL_VERSION}")
 if(STATIC_BUILD)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
-        COMMAND ./configure --enable-ssl --prefix=${CMAKE_BINARY_DIR}/librdkafka
+        COMMAND ./configure --enable-static --enable-ssl --prefix=${CMAKE_BINARY_DIR}/librdkafka
         COMMAND make -j
         COMMAND make install
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
         COMMENT "Building librdkafka"
         VERBATIM
-    )
+        )
     add_custom_target(librdkafka.a ALL
-        DEPENDS ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
-    )
-
+        DEPENDS ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a)
 
     set(RDKAFKA_LIBRARY  ${RDKAFKA_LIBRARY} ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a)
     set(RDKAFKA_INCLUDE_DIR ${CMAKE_BINARY_DIR}/librdkafka/include)
