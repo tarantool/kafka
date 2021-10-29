@@ -1,3 +1,5 @@
+#!/usr/bin/env tarantool
+
 local box = require('box')
 
 box.cfg{

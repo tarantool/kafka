@@ -60,6 +60,21 @@ log_callback(const rd_kafka_t *rd_kafka, int level, const char *fac, const char 
     }
 }
 
+int
+stats_callback(rd_kafka_t *rd_kafka, char *json, size_t json_len, void *opaque) {
+	(void)opaque;
+	(void)json_len;
+	event_queues_t *event_queues = rd_kafka_opaque(rd_kafka);
+	if (event_queues != NULL && event_queues->stats_queue != NULL) {
+		if (json != NULL) {
+			if (queue_push(event_queues->stats_queue, json) != 0)
+				return 0; // destroy json after return
+			return 1; // json should be freed manually
+		}
+	}
+	return 0;
+}
+
 /**
  * Handle errors from RDKafka
  */
@@ -291,6 +306,8 @@ event_queues_t *new_event_queues() {
     event_queues->error_cb_ref = LUA_REFNIL;
     event_queues->log_queue = NULL;
     event_queues->log_cb_ref = LUA_REFNIL;
+    event_queues->stats_queue = NULL;
+    event_queues->stats_cb_ref = LUA_REFNIL;
     event_queues->delivery_queue = NULL;
     event_queues->rebalance_cb_ref = LUA_REFNIL;
     event_queues->rebalance_queue = NULL;
@@ -320,6 +337,15 @@ void destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
             destroy_log_msg(msg);
         }
         destroy_queue(event_queues->log_queue);
+    }
+    if (event_queues->stats_queue != NULL) {
+        char *stats_json = NULL;
+        while (true) {
+            stats_json = queue_pop(event_queues->stats_queue);
+            if (stats_json == NULL)
+                break;
+        }
+        destroy_queue(event_queues->stats_queue);
     }
     if (event_queues->error_queue != NULL) {
         error_msg_t *msg = NULL;
@@ -357,15 +383,9 @@ void destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
         }
         destroy_queue(event_queues->rebalance_queue);
     }
-    if (event_queues->error_cb_ref != LUA_REFNIL) {
-        luaL_unref(L, LUA_REGISTRYINDEX, event_queues->error_cb_ref);
-    }
-
-    if (event_queues->log_cb_ref != LUA_REFNIL) {
-        luaL_unref(L, LUA_REGISTRYINDEX, event_queues->log_cb_ref);
-    }
-    if (event_queues->rebalance_cb_ref != LUA_REFNIL) {
-        luaL_unref(L, LUA_REGISTRYINDEX, event_queues->rebalance_cb_ref);
-    }
+    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->error_cb_ref);
+    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->log_cb_ref);
+    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->stats_cb_ref);
+    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->rebalance_cb_ref);
     free(event_queues);
 }

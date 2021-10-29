@@ -2,6 +2,7 @@
 #define TNT_KAFKA_CALLBACKS_H
 
 #include <pthread.h>
+#include <stddef.h>
 
 #include <lua.h>
 #include <lualib.h>
@@ -31,6 +32,12 @@ log_msg_t *new_log_msg(int level, const char *fac, const char *buf);
 void destroy_log_msg(log_msg_t *msg);
 
 void log_callback(const rd_kafka_t *rd_kafka, int level, const char *fac, const char *buf);
+
+/**
+ * Handle stats from RDKafka
+ */
+
+int stats_callback(rd_kafka_t *rd_kafka, char *json, size_t json_len, void *opaque);
 
 
 /**
@@ -96,6 +103,8 @@ typedef struct {
     queue_t *consume_queue;
     queue_t *log_queue;
     int      log_cb_ref;
+    queue_t *stats_queue;
+    int      stats_cb_ref;
     queue_t *error_queue;
     int      error_cb_ref;
     queue_t *delivery_queue;

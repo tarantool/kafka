@@ -42,6 +42,8 @@ int lua_consumer_poll_msg(struct lua_State *L);
 
 int lua_consumer_poll_logs(struct lua_State *L);
 
+int lua_consumer_poll_stats(struct lua_State *L);
+
 int lua_consumer_poll_errors(struct lua_State *L);
 
 int lua_consumer_poll_rebalances(struct lua_State *L);

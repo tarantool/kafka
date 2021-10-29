@@ -1,19 +1,20 @@
 local box = require("box")
 local json = require("json")
 local log = require("log")
-local os = require("os")
 local fiber = require('fiber')
 local tnt_kafka = require('kafka')
 
 local consumer = nil
 local errors = {}
 local logs = {}
+local stats = {}
 local rebalances = {}
 
 local function create(brokers, additional_opts)
     local err
     errors = {}
     logs = {}
+    stats = {}
     rebalances = {}
     local error_callback = function(err)
         log.error("got error: %s", err)
@@ -23,7 +24,10 @@ local function create(brokers, additional_opts)
         log.info("got log: %d - %s - %s", level, fac, str)
         table.insert(logs, string.format("got log: %d - %s - %s", level, fac, str))
     end
-
+    local stats_callback = function(json_stats)
+        log.info("got stats: %s", json_stats)
+        table.insert(stats, json_stats)
+    end
     local rebalance_callback = function(msg)
         log.info("got rebalance msg: %s", json.encode(msg))
         table.insert(rebalances, msg)
@@ -35,6 +39,7 @@ local function create(brokers, additional_opts)
         ["auto.offset.reset"] = "earliest",
         ["enable.partition.eof"] = "false",
         ["log_level"] = "7",
+        ["statistics.interval.ms"] = "1000",
     }
     if additional_opts ~= nil then
         for key, value in pairs(additional_opts) do
@@ -46,6 +51,7 @@ local function create(brokers, additional_opts)
         options = options,
         error_callback = error_callback,
         log_callback = log_callback,
+        stats_callback = stats_callback,
         rebalance_callback = rebalance_callback,
         default_topic_options = {
             ["auto.offset.reset"] = "earliest",
@@ -123,6 +129,10 @@ local function get_logs()
     return logs
 end
 
+local function get_stats()
+    return stats
+end
+
 local function get_rebalances()
     return rebalances
 end
@@ -145,5 +155,6 @@ return {
     close = close,
     get_errors = get_errors,
     get_logs = get_logs,
+    get_stats = get_stats,
     get_rebalances = get_rebalances,
 }

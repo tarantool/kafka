@@ -1,7 +1,5 @@
-local os = require('os')
 local box = require('box')
 local log = require('log')
-local fiber = require('fiber')
 local tnt_kafka = require('kafka')
 
 local TOPIC_NAME = "test_producer"
@@ -9,12 +7,13 @@ local TOPIC_NAME = "test_producer"
 local producer = nil
 local errors = {}
 local logs = {}
+local stats = {}
 
 local function create(brokers, additional_opts)
     local err
-    local options = {}
     errors = {}
     logs = {}
+    stats = {}
     local error_callback = function(err)
         log.error("got error: %s", err)
         table.insert(errors, err)
@@ -23,8 +22,14 @@ local function create(brokers, additional_opts)
         log.info("got log: %d - %s - %s", level, fac, str)
         table.insert(logs, string.format("got log: %d - %s - %s", level, fac, str))
     end
+    local stats_callback = function(json_stats)
+        log.info("got stats: %s", json_stats)
+        table.insert(stats, json_stats)
+    end
 
-    local options = {}
+    local options = {
+        ["statistics.interval.ms"] = "1000",
+    }
     if additional_opts ~= nil then
         for key, value in pairs(additional_opts) do
             options[key] = value
@@ -35,6 +40,7 @@ local function create(brokers, additional_opts)
         brokers = brokers,
         options = options,
         log_callback = log_callback,
+        stats_callback = stats_callback,
         error_callback = error_callback,
         default_topic_options = {
             ["partitioner"] = "murmur2_random",
@@ -65,6 +71,10 @@ local function get_logs()
     return logs
 end
 
+local function get_stats()
+    return stats
+end
+
 local function close()
     local ok, err = producer:close()
     if err ~= nil then
@@ -78,5 +88,6 @@ return {
     produce = produce,
     get_errors = get_errors,
     get_logs = get_logs,
+    get_stats = get_stats,
     close = close,
 }

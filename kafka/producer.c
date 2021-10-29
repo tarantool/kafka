@@ -267,6 +267,48 @@ lua_producer_poll_logs(struct lua_State *L) {
 }
 
 int
+lua_producer_poll_stats(struct lua_State *L) {
+    if (lua_gettop(L) != 2)
+        luaL_error(L, "Usage: count, err = producer:poll_stats(limit)");
+
+    producer_t *producer = lua_check_producer(L, 1);
+    if (producer->event_queues == NULL ||
+            producer->event_queues->stats_queue == NULL ||
+            producer->event_queues->stats_cb_ref == LUA_REFNIL) {
+        lua_pushnumber(L, 0);
+        lua_pushliteral(L, "Consumer poll stats error: callback for logs is not set");
+        return 2;
+    }
+
+    int limit = lua_tonumber(L, 2);
+    char *json = NULL;
+    int count = 0;
+    char *err_str = NULL;
+    while (count < limit) {
+        json = queue_pop(producer->event_queues->stats_queue);
+        if (json == NULL)
+            break;
+        count++;
+        lua_rawgeti(L, LUA_REGISTRYINDEX, producer->event_queues->stats_cb_ref);
+        lua_pushstring(L, json);
+        /* do the call (1 arguments, 0 result) */
+        if (lua_pcall(L, 1, 0, 0) != 0)
+            err_str = (char*)lua_tostring(L, -1);
+
+        free(json);
+
+        if (err_str != NULL)
+            break;
+    }
+    lua_pushnumber(L, (double)count);
+    if (err_str != NULL) {
+        lua_pushstring(L, err_str);
+        return 2;
+    }
+    return 1;
+}
+
+int
 lua_producer_poll_errors(struct lua_State *L) {
     if (lua_gettop(L) != 2)
         luaL_error(L, "Usage: count, err = producer:poll_errors(limit)");
@@ -537,11 +579,21 @@ lua_create_producer(struct lua_State *L) {
     }
 
     lua_pushstring(L, "log_callback");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     if (lua_isfunction(L, -1)) {
         event_queues->log_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
         event_queues->log_queue = new_queue();
         rd_kafka_conf_set_log_cb(rd_config, log_callback);
+    } else {
+        lua_pop(L, 1);
+    }
+
+    lua_pushstring(L, "stats_callback");
+    lua_gettable(L, -2);
+    if (lua_isfunction(L, -1)) {
+        event_queues->stats_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        event_queues->stats_queue = new_queue();
+        rd_kafka_conf_set_stats_cb(rd_config, stats_callback);
     } else {
         lua_pop(L, 1);
     }

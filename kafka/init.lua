@@ -33,6 +33,12 @@ function Consumer.create(config)
         end)
     end
 
+    if config.stats_callback ~= nil then
+        new._poll_stats_fiber = fiber.create(function()
+            new:_poll_stats()
+        end)
+    end
+
     if config.error_callback ~= nil then
         new._poll_errors_fiber = fiber.create(function()
             new:_poll_errors()
@@ -84,6 +90,25 @@ function Consumer:_poll_logs()
 end
 
 jit.off(Consumer._poll_logs)
+
+function Consumer:_poll_stats()
+    local count, err
+    while true do
+        count, err = self._consumer:poll_stats(100)
+        if err ~= nil then
+            log.error("Consumer poll stats error: %s", err)
+            -- throttling poll
+            fiber.sleep(0.1)
+        elseif count > 0 then
+            fiber.yield()
+        else
+            -- throttling poll
+            fiber.sleep(1)
+        end
+    end
+end
+
+jit.off(Consumer._poll_stats)
 
 function Consumer:_poll_errors()
     local count, err
@@ -137,6 +162,9 @@ function Consumer:close()
 
     if self._poll_logs_fiber ~= nil then
         self._poll_logs_fiber:cancel()
+    end
+    if self._poll_stats_fiber ~= nil then
+        self._poll_stats_fiber:cancel()
     end
     if self._poll_errors_fiber ~= nil then
         self._poll_errors_fiber:cancel()
@@ -200,6 +228,12 @@ function Producer.create(config)
         end)
     end
 
+    if config.stats_callback ~= nil then
+        new._poll_stats_fiber = fiber.create(function()
+            new:_poll_stats()
+        end)
+    end
+
     if config.error_callback ~= nil then
         new._poll_errors_fiber = fiber.create(function()
             new:_poll_errors()
@@ -248,6 +282,25 @@ function Producer:_poll_logs()
 end
 
 jit.off(Producer._poll_logs)
+
+function Producer:_poll_stats()
+    local count, err
+    while true do
+        count, err = self._producer:poll_stats(100)
+        if err ~= nil then
+            log.error("Producer poll stats error: %s", err)
+            -- throttling poll
+            fiber.sleep(0.1)
+        elseif count > 0 then
+            fiber.yield()
+        else
+            -- throttling poll
+            fiber.sleep(1)
+        end
+    end
+end
+
+jit.off(Producer._poll_stats)
 
 function Producer:_poll_errors()
     local count, err
@@ -302,6 +355,9 @@ function Producer:close()
     self._msg_delivery_poll_fiber:cancel()
     if self._poll_logs_fiber ~= nil then
         self._poll_logs_fiber:cancel()
+    end
+    if self._poll_stats_fiber ~= nil then
+        self._poll_stats_fiber:cancel()
     end
     if self._poll_errors_fiber ~= nil then
         self._poll_errors_fiber:cancel()
