@@ -58,7 +58,7 @@ function Consumer:_poll_msg()
             end
             fiber.yield()
         else
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(0.01)
         end
     end
@@ -72,12 +72,12 @@ function Consumer:_poll_logs()
         count, err = self._consumer:poll_logs(100)
         if err ~= nil then
             log.error("Consumer poll logs error: %s", err)
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(0.1)
         elseif count > 0 then
             fiber.yield()
         else
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(1)
         end
     end
@@ -91,12 +91,12 @@ function Consumer:_poll_errors()
         count, err = self._consumer:poll_errors(100)
         if err ~= nil then
             log.error("Consumer poll errors error: %s", err)
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(0.1)
         elseif count > 0 then
             fiber.yield()
         else
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(1)
         end
     end
@@ -110,12 +110,12 @@ function Consumer:_poll_rebalances()
         count, err = self._consumer:poll_rebalances(1)
         if err ~= nil then
             log.error("Consumer poll rebalances error: %s", err)
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(0.1)
         elseif count > 0 then
             fiber.yield()
         else
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(0.5)
         end
     end
@@ -210,19 +210,18 @@ function Producer.create(config)
 end
 
 function Producer:_msg_delivery_poll()
-    local count, err
     while true do
         local count, err
         while true do
             count, err = self._producer:msg_delivery_poll(100)
             if err ~= nil then
                 log.error(err)
-                -- throtling poll
+                -- throttling poll
                 fiber.sleep(0.01)
             elseif count > 0 then
                 fiber.yield()
             else
-                -- throtling poll
+                -- throttling poll
                 fiber.sleep(0.01)
             end
         end
@@ -237,12 +236,12 @@ function Producer:_poll_logs()
         count, err = self._producer:poll_logs(100)
         if err ~= nil then
             log.error("Producer poll logs error: %s", err)
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(0.1)
         elseif count > 0 then
             fiber.yield()
         else
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(1)
         end
     end
@@ -256,12 +255,12 @@ function Producer:_poll_errors()
         count, err = self._producer:poll_errors(100)
         if err ~= nil then
             log.error("Producer poll errors error: %s", err)
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(0.1)
         elseif count > 0 then
             fiber.yield()
         else
-            -- throtling poll
+            -- throttling poll
             fiber.sleep(1)
         end
     end
