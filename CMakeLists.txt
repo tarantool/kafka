@@ -10,7 +10,7 @@ set(MY_C_FLAGS "-Wall -Wextra -Werror -std=gnu11 -fno-strict-aliasing -Wno-depre
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_C_FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${MY_C_FLAGS} -ggdb3")
 
-set(TARANTOOL_FIND_REQUIRED ON)
+set(Tarantool_FIND_REQUIRED ON)
 find_package(Tarantool)
 # Oracle Connector requires fiber_cond API added in 1.7.4-291
 string(REPLACE "-" "." tntver ${TARANTOOL_VERSION})
