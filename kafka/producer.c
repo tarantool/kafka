@@ -417,26 +417,25 @@ wait_producer_destroy(va_list args) {
 
 void
 destroy_producer(struct lua_State *L, producer_t *producer) {
-    if (producer->rd_producer != NULL) {
-        coio_call(producer_flush, producer->rd_producer);
-    }
-
-    if (producer->poller != NULL) {
-        destroy_producer_poller(producer->poller);
-    }
-
-    if (producer->topics != NULL) {
+    if (producer->topics != NULL)
         destroy_producer_topics(producer->topics);
-    }
 
-    if (producer->event_queues != NULL) {
-        destroy_event_queues(L, producer->event_queues);
-    }
-
+    /*
+     * Here we close producer and only then destroys other stuff.
+     * Otherwise raise condition is possible when e.g.
+     * event queue is destroyed but producer still receives logs, errors, etc.
+     * Only topics should be destroyed.
+     */
     if (producer->rd_producer != NULL) {
         /* Destroy handle */
         coio_call(wait_producer_destroy, producer->rd_producer);
     }
+
+    if (producer->poller != NULL)
+        destroy_producer_poller(producer->poller);
+
+    if (producer->event_queues != NULL)
+        destroy_event_queues(L, producer->event_queues);
 
     free(producer);
 }
