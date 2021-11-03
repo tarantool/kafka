@@ -1,7 +1,7 @@
 package = "kafka"
 version = "1.1.0-0"
 source = {
-    url = "git://github.com/tarantool/kafka.git",
+    url = "git+https://github.com/tarantool/kafka.git",
     branch = 'master',
 }
 description = {
