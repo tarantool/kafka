@@ -1,4 +1,4 @@
 pytest
-kafka-python==2.0.0
-aiokafka==0.7.0
-tarantool==0.6.6
+kafka-python==2.0.2
+aiokafka==0.7.2
+tarantool==0.7.1
