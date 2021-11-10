@@ -1,12 +1,9 @@
-import os
 import time
 import asyncio
 from contextlib import contextmanager
 
 from aiokafka import AIOKafkaProducer
 import tarantool
-
-KAFKA_HOST = os.getenv("KAFKA_HOST", "kafka:9092")
 
 
 def get_server():
@@ -73,7 +70,7 @@ def test_consumer_should_consume_msgs():
 
     server = get_server()
 
-    with create_consumer(server, KAFKA_HOST, {"group.id": "should_consume_msgs"}):
+    with create_consumer(server, "kafka:9092", {"group.id": "should_consume_msgs"}):
         server.call("consumer.subscribe", [["test_consume"]])
 
         response = server.call("consumer.consume", [10])
@@ -106,7 +103,7 @@ def test_consumer_should_consume_msgs_from_multiple_topics():
 
     server = get_server()
 
-    with create_consumer(server, KAFKA_HOST, {"group.id": "should_consume_msgs_from_multiple_topics"}):
+    with create_consumer(server, "kafka:9092", {"group.id": "should_consume_msgs_from_multiple_topics"}):
         server.call("consumer.subscribe", [["test_multi_consume_1", "test_multi_consume_2"]])
 
         response = server.call("consumer.consume", [10])
@@ -138,7 +135,7 @@ def test_consumer_should_completely_unsubscribe_from_topics():
 
     server = get_server()
 
-    with create_consumer(server, KAFKA_HOST, {"group.id": "should_completely_unsubscribe_from_topics"}):
+    with create_consumer(server, "kafka:9092", {"group.id": "should_completely_unsubscribe_from_topics"}):
         server.call("consumer.subscribe", [["test_unsubscribe"]])
 
         response = server.call("consumer.consume", [10])
@@ -180,7 +177,7 @@ def test_consumer_should_partially_unsubscribe_from_topics():
 
     server = get_server()
 
-    with create_consumer(server, KAFKA_HOST, {"group.id": "should_partially_unsubscribe_from_topics"}):
+    with create_consumer(server, "kafka:9092", {"group.id": "should_partially_unsubscribe_from_topics"}):
         server.call("consumer.subscribe", [["test_unsub_partially_1", "test_unsub_partially_2"]])
 
         write_into_kafka("test_unsub_partially_1", (message1, ))
@@ -218,7 +215,7 @@ def test_consumer_should_log_errors():
 def test_consumer_should_log_debug():
     server = get_server()
 
-    with create_consumer(server, KAFKA_HOST, {"debug": "consumer,cgrp,topic,fetch"}):
+    with create_consumer(server, "kafka:9092", {"debug": "consumer,cgrp,topic,fetch"}):
         time.sleep(2)
 
         response = server.call("consumer.get_logs", [])
@@ -229,12 +226,12 @@ def test_consumer_should_log_debug():
 def test_consumer_should_log_rebalances():
     server = get_server()
 
-    with create_consumer(server, KAFKA_HOST):
-        time.sleep(5)
+    with create_consumer(server, "kafka:9092"):
+        time.sleep(2)
 
         server.call("consumer.subscribe", [["test_unsub_partially_1"]])
 
-        time.sleep(20)
+        time.sleep(10)
 
         response = server.call("consumer.get_rebalances", [])
 
@@ -264,7 +261,7 @@ def test_consumer_should_continue_consuming_from_last_committed_offset():
 
     server = get_server()
 
-    with create_consumer(server, KAFKA_HOST, {"group.id": "should_continue_consuming_from_last_committed_offset"}):
+    with create_consumer(server, "kafka:9092", {"group.id": "should_continue_consuming_from_last_committed_offset"}):
         server.call("consumer.subscribe", [["test_consuming_from_last_committed_offset"]])
 
         write_into_kafka("test_consuming_from_last_committed_offset", (message1, ))
@@ -280,7 +277,7 @@ def test_consumer_should_continue_consuming_from_last_committed_offset():
 
     time.sleep(2)
 
-    with create_consumer(server, KAFKA_HOST, {"group.id": "should_continue_consuming_from_last_committed_offset"}):
+    with create_consumer(server, "kafka:9092", {"group.id": "should_continue_consuming_from_last_committed_offset"}):
         server.call("consumer.subscribe", [["test_consuming_from_last_committed_offset"]])
 
         write_into_kafka("test_consuming_from_last_committed_offset", (message3, ))

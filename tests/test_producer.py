@@ -1,11 +1,8 @@
-import os
 import time
 import asyncio
 
 from aiokafka import AIOKafkaConsumer
 import tarantool
-
-KAFKA_HOST = os.getenv("KAFKA_HOST", "kafka:9092")
 
 
 def get_server():
@@ -21,7 +18,7 @@ def get_server():
 def test_producer_should_produce_msgs():
     server = get_server()
 
-    server.call("producer.create", [KAFKA_HOST])
+    server.call("producer.create", ["kafka:9092"])
 
     server.call("producer.produce", (
         (
@@ -59,7 +56,7 @@ def test_producer_should_produce_msgs():
                 await consumer.stop()
 
         try:
-            await asyncio.wait_for(consume(), 10)
+            await asyncio.wait_for(consume(), 10, loop=loop)
         except asyncio.TimeoutError:
             pass
 
@@ -101,7 +98,7 @@ def test_producer_should_log_errors():
 def test_producer_should_log_debug():
     server = get_server()
 
-    server.call("producer.create", [KAFKA_HOST, {"debug": "broker,topic,msg"}])
+    server.call("producer.create", ["kafka:9092", {"debug": "broker,topic,msg"}])
 
     time.sleep(2)
 
