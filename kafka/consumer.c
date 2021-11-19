@@ -570,7 +570,7 @@ lua_consumer_close(struct lua_State *L) {
     rd_kafka_unsubscribe((*consumer_p)->rd_consumer);
 
     // trying to close in background until success
-    int attempts = 5
+    int attempts = 5;
     while (coio_call(wait_consumer_close, (*consumer_p)->rd_consumer) == -1) {
         // FIXME: maybe send errors to error queue?
         attempts -= 1;
