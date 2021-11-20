@@ -375,7 +375,7 @@ lua_producer_produce(struct lua_State *L) {
         if (rd_topic == NULL) {
             const char *const_err_str = rd_kafka_err2str(rd_kafka_errno2err(errno));
             char err_str[512];
-            strncpy(err_str, const_err_str, 512);
+            strncpy(err_str, const_err_str, sizeof(err_str)-1);
             int fail = safe_pushstring(L, err_str);
             return fail ? lua_push_error(L): 1;
         }
@@ -388,7 +388,7 @@ lua_producer_produce(struct lua_State *L) {
     if (rd_kafka_produce(rd_topic, -1, RD_KAFKA_MSG_F_COPY, value, value_len, key, key_len, dr_msg) == -1) {
         const char *const_err_str = rd_kafka_err2str(rd_kafka_errno2err(errno));
         char err_str[512];
-        strncpy(err_str, const_err_str, 512);
+        strncpy(err_str, const_err_str, sizeof(err_str)-1);
         int fail = safe_pushstring(L, err_str);
         return fail ? lua_push_error(L): 1;
     }

@@ -157,7 +157,7 @@ lua_consumer_subscribe(struct lua_State *L) {
     if (err) {
         const char *const_err_str = rd_kafka_err2str(err);
         char err_str[512];
-        strncpy(err_str, const_err_str, 512);
+        strncpy(err_str, const_err_str, sizeof(err_str)-1);
         int fail = safe_pushstring(L, err_str);
         return fail ? lua_push_error(L): 1;
     }
@@ -195,7 +195,7 @@ lua_consumer_unsubscribe(struct lua_State *L) {
         if (err) {
             const char *const_err_str = rd_kafka_err2str(err);
             char err_str[512];
-            strncpy(err_str, const_err_str, 512);
+            strncpy(err_str, const_err_str, sizeof(err_str)-1);
             int fail = safe_pushstring(L, err_str);
             return fail ? lua_push_error(L): 1;
         }
@@ -204,7 +204,7 @@ lua_consumer_unsubscribe(struct lua_State *L) {
         if (err) {
             const char *const_err_str = rd_kafka_err2str(err);
             char err_str[512];
-            strncpy(err_str, const_err_str, 512);
+            strncpy(err_str, const_err_str, sizeof(err_str)-1);
             int fail = safe_pushstring(L, err_str);
             return fail ? lua_push_error(L): 1;
         }
@@ -505,7 +505,7 @@ lua_consumer_store_offset(struct lua_State *L) {
     if (err) {
         const char *const_err_str = rd_kafka_err2str(err);
         char err_str[512];
-        strncpy(err_str, const_err_str, 512);
+        strncpy(err_str, const_err_str, sizeof(err_str)-1);
         int fail = safe_pushstring(L, err_str);
         return fail ? lua_push_error(L): 1;
     }
