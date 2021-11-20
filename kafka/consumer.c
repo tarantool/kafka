@@ -157,7 +157,7 @@ lua_consumer_subscribe(struct lua_State *L) {
     if (err) {
         const char *const_err_str = rd_kafka_err2str(err);
         char err_str[512];
-        strcpy(err_str, const_err_str);
+        strncpy(err_str, const_err_str, 512);
         int fail = safe_pushstring(L, err_str);
         return fail ? lua_push_error(L): 1;
     }
@@ -195,7 +195,7 @@ lua_consumer_unsubscribe(struct lua_State *L) {
         if (err) {
             const char *const_err_str = rd_kafka_err2str(err);
             char err_str[512];
-            strcpy(err_str, const_err_str);
+            strncpy(err_str, const_err_str, 512);
             int fail = safe_pushstring(L, err_str);
             return fail ? lua_push_error(L): 1;
         }
@@ -204,7 +204,7 @@ lua_consumer_unsubscribe(struct lua_State *L) {
         if (err) {
             const char *const_err_str = rd_kafka_err2str(err);
             char err_str[512];
-            strcpy(err_str, const_err_str);
+            strncpy(err_str, const_err_str, 512);
             int fail = safe_pushstring(L, err_str);
             return fail ? lua_push_error(L): 1;
         }
@@ -505,7 +505,7 @@ lua_consumer_store_offset(struct lua_State *L) {
     if (err) {
         const char *const_err_str = rd_kafka_err2str(err);
         char err_str[512];
-        strcpy(err_str, const_err_str);
+        strncpy(err_str, const_err_str, 512);
         int fail = safe_pushstring(L, err_str);
         return fail ? lua_push_error(L): 1;
     }
@@ -515,7 +515,17 @@ lua_consumer_store_offset(struct lua_State *L) {
 static ssize_t
 wait_consumer_close(va_list args) {
     rd_kafka_t *rd_consumer = va_arg(args, rd_kafka_t *);
-    rd_kafka_commit(rd_consumer, NULL, 0); // sync commit of current offsets
+    rd_kafka_unsubscribe(rd_consumer);
+    rd_kafka_message_t *rd_msg = NULL;
+    while (true) {
+        rd_msg = rd_kafka_consumer_poll(rd_consumer, 1000);
+        if (rd_msg != NULL) {
+            rd_kafka_message_destroy(rd_msg);
+        } else {
+            break;
+        }
+    }
+
     if (rd_kafka_consumer_close(rd_consumer) != RD_KAFKA_RESP_ERR_NO_ERROR) {
         // FIXME: maybe send errors to error queue?
         return -1;
@@ -567,7 +577,6 @@ lua_consumer_close(struct lua_State *L) {
     }
 
     rd_kafka_commit((*consumer_p)->rd_consumer, NULL, 0); // sync commit of current offsets
-    rd_kafka_unsubscribe((*consumer_p)->rd_consumer);
 
     // trying to close in background until success
     int attempts = 5;
@@ -577,7 +586,6 @@ lua_consumer_close(struct lua_State *L) {
         if (attempts == 0) 
             break;
     }
-
     lua_pushboolean(L, 1);
     return 1;
 }

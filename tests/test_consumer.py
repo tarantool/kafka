@@ -98,7 +98,7 @@ def test_consumer_should_consume_msgs_from_multiple_topics():
 
     message3 = {
         "key": "test1",
-        "value": "test3"
+        "value": "test33"
     }
 
     write_into_kafka("test_multi_consume_1", (message1, message2))
@@ -114,7 +114,7 @@ def test_consumer_should_consume_msgs_from_multiple_topics():
         assert set(*response) == {
             "test1",
             "test2",
-            "test3"
+            "test33"
         }
 
 
@@ -131,7 +131,7 @@ def test_consumer_should_completely_unsubscribe_from_topics():
 
     message3 = {
         "key": "test1",
-        "value": "test3"
+        "value": "test34"
     }
 
     write_into_kafka("test_unsubscribe", (message1, message2))
@@ -170,12 +170,12 @@ def test_consumer_should_partially_unsubscribe_from_topics():
 
     message3 = {
         "key": "test1",
-        "value": "test3"
+        "value": "test35"
     }
 
     message4 = {
         "key": "test1",
-        "value": "test4"
+        "value": "test45"
     }
 
     server = get_server()
@@ -201,7 +201,7 @@ def test_consumer_should_partially_unsubscribe_from_topics():
 
         response = server.call("consumer.consume", [30])
 
-        assert set(*response) == {"test4"}
+        assert set(*response) == {"test45"}
 
 
 def test_consumer_should_log_errors():
