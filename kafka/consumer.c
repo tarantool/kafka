@@ -575,24 +575,8 @@ lua_consumer_close(struct lua_State *L) {
         return 1;
     }
 
-    rd_kafka_resp_err_t err = rd_kafka_unsubscribe((*consumer_p)->rd_consumer);
-    if (err) {
-        lua_pushnil(L);
-        const char *const_err_str = rd_kafka_err2str(err);
-        char err_str[512];
-        strncpy(err_str, const_err_str, sizeof(err_str) - 1);
-        int fail = safe_pushstring(L, err_str);
-        return fail ? lua_push_error(L): 2;
-    }
-    err = rd_kafka_commit((*consumer_p)->rd_consumer, NULL, 0); // sync commit of current offsets
-    if (err) {
-        lua_pushnil(L);
-        const char *const_err_str = rd_kafka_err2str(err);
-        char err_str[512];
-        strncpy(err_str, const_err_str, sizeof(err_str) - 1);
-        int fail = safe_pushstring(L, err_str);
-        return fail ? lua_push_error(L): 2;
-    }
+    rd_kafka_unsubscribe((*consumer_p)->rd_consumer);
+    rd_kafka_commit((*consumer_p)->rd_consumer, NULL, 0); // sync commit of current offsets
 
     // trying to close in background until success
     coio_call(wait_consumer_close, (*consumer_p)->rd_consumer);
