@@ -516,6 +516,7 @@ static ssize_t
 wait_consumer_close(va_list args) {
     rd_kafka_t *rd_consumer = va_arg(args, rd_kafka_t *);
     rd_kafka_message_t *rd_msg = NULL;
+    // cleanup consumer queue, because at other way close hangs forever
     while (true) {
         rd_msg = rd_kafka_consumer_poll(rd_consumer, 1000);
         if (rd_msg != NULL) {
@@ -575,6 +576,7 @@ lua_consumer_close(struct lua_State *L) {
         return 1;
     }
 
+    // unsubscribe consumer to make possible close it
     rd_kafka_unsubscribe((*consumer_p)->rd_consumer);
     rd_kafka_commit((*consumer_p)->rd_consumer, NULL, 0); // sync commit of current offsets
 
