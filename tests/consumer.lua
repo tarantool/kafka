@@ -104,7 +104,7 @@ local function consume(timeout)
                 table.insert(consumed, msg:value())
                 local err = consumer:store_offset(msg)
                 if err ~= nil then
-                    log.error("got error '%s' while commiting msg from topic '%s'", err, msg:topic())
+                    log.error("got error '%s' while committing msg from topic '%s'", err, msg:topic())
                 end
             else
                 fiber.sleep(0.2)
@@ -139,7 +139,7 @@ end
 
 local function close()
     log.info("closing consumer")
-    local exists, err = consumer:close()
+    local _, err = consumer:close()
     if err ~= nil then
         log.error("got err %s", err)
         box.error{code = 500, reason = err}

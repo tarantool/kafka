@@ -14,6 +14,7 @@ def get_server():
                                 user="guest",
                                 password=None,
                                 socket_timeout=40,
+                                connection_timeout=40,
                                 reconnect_max_attempts=3,
                                 reconnect_delay=1,
                                 connect_now=True)
@@ -33,8 +34,7 @@ def write_into_kafka(topic, messages):
     loop = asyncio.get_event_loop()
 
     async def send():
-        producer = AIOKafkaProducer(
-            loop=loop, bootstrap_servers='localhost:9092')
+        producer = AIOKafkaProducer(bootstrap_servers='localhost:9092')
         # Get cluster layout and initial topic/partition leadership information
         await producer.start()
         try:

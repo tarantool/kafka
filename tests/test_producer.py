@@ -13,6 +13,7 @@ def get_server():
                                 user="guest",
                                 password=None,
                                 socket_timeout=10,
+                                connection_timeout=40,
                                 reconnect_max_attempts=3,
                                 reconnect_delay=1,
                                 connect_now=True)
@@ -39,7 +40,6 @@ def test_producer_should_produce_msgs():
             consumer = AIOKafkaConsumer(
                 'test_producer',
                 group_id="test_group",
-                loop=loop,
                 bootstrap_servers='localhost:9092',
                 auto_offset_reset="earliest",
             )
