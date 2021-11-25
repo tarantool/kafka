@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import asyncio
 from contextlib import contextmanager
 
@@ -213,6 +214,22 @@ def test_consumer_should_log_errors():
         response = server.call("consumer.get_errors", [])
 
         assert len(response.data[0]) > 0
+
+
+def test_consumer_stats():
+    server = get_server()
+
+    with create_consumer(server, "kafka:9090"):
+        time.sleep(2)
+
+        response = server.call("consumer.get_stats", [])
+        assert len(response) > 0
+        assert len(response[0]) > 0
+        stat = json.loads(response[0][0])
+
+        assert 'rdkafka#consumer' in stat['name']
+        assert 'kafka:9090/bootstrap' in stat['brokers']
+        assert stat['type'] == 'consumer'
 
 
 def test_consumer_should_log_debug():

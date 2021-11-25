@@ -25,7 +25,7 @@ local function create(brokers, additional_opts)
         table.insert(logs, string.format("got log: %d - %s - %s", level, fac, str))
     end
     local stats_callback = function(json_stats)
-        log.info("got stats: %s", json_stats)
+        log.info("got stats")
         table.insert(stats, json_stats)
     end
     local rebalance_callback = function(msg)

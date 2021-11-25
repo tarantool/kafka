@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import asyncio
 
 from aiokafka import AIOKafkaConsumer
@@ -36,6 +37,7 @@ def test_producer_should_produce_msgs():
 
     async def test():
         kafka_output = []
+
         async def consume():
             consumer = AIOKafkaConsumer(
                 'test_producer',
@@ -94,6 +96,25 @@ def test_producer_should_log_errors():
 
     assert len(response) > 0
     assert len(response[0]) > 0
+
+    server.call("producer.close", [])
+
+
+def test_producer_stats():
+    server = get_server()
+
+    server.call("producer.create", ["kafka:9090"])
+
+    time.sleep(2)
+
+    response = server.call("producer.get_stats", [])
+    assert len(response) > 0
+    assert len(response[0]) > 0
+    stat = json.loads(response[0][0])
+
+    assert 'rdkafka#producer' in stat['name']
+    assert 'kafka:9090/bootstrap' in stat['brokers']
+    assert stat['type'] == 'producer'
 
     server.call("producer.close", [])
 
