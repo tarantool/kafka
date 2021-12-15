@@ -196,6 +196,13 @@ function Consumer:store_offset(message)
     return self._consumer:store_offset(message)
 end
 
+function Consumer:dump_conf()
+    if self._consumer == nil then
+        return
+    end
+    return self._consumer:dump_conf()
+end
+
 local Producer = {}
 
 Producer.__index = Producer
@@ -343,6 +350,13 @@ function Producer:produce(msg)
     end
 
     return err
+end
+
+function Producer:dump_conf()
+    if self._producer == nil then
+        return
+    end
+    return self._producer:dump_conf()
 end
 
 function Producer:close()

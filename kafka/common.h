@@ -13,6 +13,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
+#include <librdkafka/rdkafka.h>
 
 #include <tarantool/module.h>
 
@@ -25,6 +26,8 @@ int save_pushstring_wrapped(struct lua_State *L);
 int safe_pushstring(struct lua_State *L, char *str);
 
 int lua_librdkafka_version(struct lua_State *L);
+
+int lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk);
 
 /**
  * Push native lua error with code -3

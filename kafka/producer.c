@@ -504,6 +504,17 @@ lua_producer_close(struct lua_State *L) {
 }
 
 int
+lua_producer_dump_conf(struct lua_State *L) {
+    producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+    if (producer_p == NULL || *producer_p == NULL)
+        return 0;
+
+    if ((*producer_p)->rd_producer != NULL)
+        return lua_librdkafka_dump_conf(L, (*producer_p)->rd_producer);
+    return 0;
+}
+
+int
 lua_producer_destroy(struct lua_State *L) {
     producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
     if (producer_p && *producer_p) {

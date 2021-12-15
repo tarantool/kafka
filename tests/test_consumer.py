@@ -232,6 +232,20 @@ def test_consumer_stats():
         assert stat['type'] == 'consumer'
 
 
+def test_consumer_dump_conf():
+    server = get_server()
+
+    with create_consumer(server, "kafka:9090"):
+        time.sleep(2)
+
+        response = server.call("consumer.dump_conf", [])
+        assert len(response) > 0
+        assert len(response[0]) > 0
+        assert 'session.timeout.ms' in response[0]
+        assert 'socket.max.fails' in response[0]
+        assert 'compression.codec' in response[0]
+
+
 def test_consumer_should_log_debug():
     server = get_server()
 

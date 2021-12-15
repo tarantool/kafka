@@ -137,6 +137,10 @@ local function get_rebalances()
     return rebalances
 end
 
+local function dump_conf()
+    return consumer:dump_conf()
+end
+
 local function close()
     log.info("closing consumer")
     local _, err = consumer:close()
@@ -157,4 +161,5 @@ return {
     get_logs = get_logs,
     get_stats = get_stats,
     get_rebalances = get_rebalances,
+    dump_conf = dump_conf,
 }

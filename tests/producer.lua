@@ -63,6 +63,10 @@ local function produce(messages)
     end
 end
 
+local function dump_conf()
+    return producer:dump_conf()
+end
+
 local function get_errors()
     return errors
 end
@@ -76,7 +80,7 @@ local function get_stats()
 end
 
 local function close()
-    local ok, err = producer:close()
+    local _, err = producer:close()
     if err ~= nil then
         log.error("got err %s", err)
         box.error{code = 500, reason = err}
@@ -90,4 +94,5 @@ return {
     get_logs = get_logs,
     get_stats = get_stats,
     close = close,
+    dump_conf = dump_conf,
 }
