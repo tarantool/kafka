@@ -155,10 +155,7 @@ lua_consumer_subscribe(struct lua_State *L) {
 
     rd_kafka_resp_err_t err = rd_kafka_subscribe(consumer->rd_consumer, consumer->topics);
     if (err) {
-        const char *const_err_str = rd_kafka_err2str(err);
-        char err_str[512];
-        strncpy(err_str, const_err_str, sizeof(err_str) - 1);
-        int fail = safe_pushstring(L, err_str);
+        int fail = safe_pushstring(L, rd_kafka_err2str(err));
         return fail ? lua_push_error(L): 1;
     }
 
@@ -193,19 +190,13 @@ lua_consumer_unsubscribe(struct lua_State *L) {
     if (consumer->topics->cnt > 0) {
         rd_kafka_resp_err_t err = rd_kafka_subscribe(consumer->rd_consumer, consumer->topics);
         if (err) {
-            const char *const_err_str = rd_kafka_err2str(err);
-            char err_str[512];
-            strncpy(err_str, const_err_str, sizeof(err_str) - 1);
-            int fail = safe_pushstring(L, err_str);
+            int fail = safe_pushstring(L, rd_kafka_err2str(err));
             return fail ? lua_push_error(L): 1;
         }
     } else {
         rd_kafka_resp_err_t err = rd_kafka_unsubscribe(consumer->rd_consumer);
         if (err) {
-            const char *const_err_str = rd_kafka_err2str(err);
-            char err_str[512];
-            strncpy(err_str, const_err_str, sizeof(err_str) - 1);
-            int fail = safe_pushstring(L, err_str);
+            int fail = safe_pushstring(L, rd_kafka_err2str(err));
             return fail ? lua_push_error(L): 1;
         }
     }
@@ -545,10 +536,7 @@ lua_consumer_store_offset(struct lua_State *L) {
     msg_t *msg = lua_check_consumer_msg(L, 2);
     rd_kafka_resp_err_t err = rd_kafka_offset_store(msg->topic, msg->partition, msg->offset);
     if (err) {
-        const char *const_err_str = rd_kafka_err2str(err);
-        char err_str[512];
-        strncpy(err_str, const_err_str, sizeof(err_str) - 1);
-        int fail = safe_pushstring(L, err_str);
+        int fail = safe_pushstring(L, rd_kafka_err2str(err));
         return fail ? lua_push_error(L): 1;
     }
     return 0;

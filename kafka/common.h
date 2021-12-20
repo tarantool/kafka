@@ -23,7 +23,7 @@ const char* const producer_label;
 
 int save_pushstring_wrapped(struct lua_State *L);
 
-int safe_pushstring(struct lua_State *L, char *str);
+int safe_pushstring(struct lua_State *L, const char *str);
 
 int lua_librdkafka_version(struct lua_State *L);
 

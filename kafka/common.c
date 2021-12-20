@@ -7,15 +7,15 @@ const char* const producer_label = "__tnt_kafka_producer";
 
 int
 save_pushstring_wrapped(struct lua_State *L) {
-    char *str = (char *)lua_topointer(L, 1);
+    const char *str = (const char *)lua_topointer(L, 1);
     lua_pushstring(L, str);
     return 1;
 }
 
 int
-safe_pushstring(struct lua_State *L, char *str) {
+safe_pushstring(struct lua_State *L, const char *str) {
     lua_pushcfunction(L, save_pushstring_wrapped);
-    lua_pushlightuserdata(L, str);
+    lua_pushlightuserdata(L, (void *)str);
     return lua_pcall(L, 1, 1, 0);
 }
 
