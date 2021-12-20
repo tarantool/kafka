@@ -453,8 +453,10 @@ wait_producer_destroy(va_list args) {
 
 void
 destroy_producer(struct lua_State *L, producer_t *producer) {
-    if (producer->topics != NULL)
+    if (producer->topics != NULL) {
         destroy_producer_topics(producer->topics);
+        producer->topics = NULL;
+    }
 
     /*
      * Here we close producer and only then destroys other stuff.
@@ -465,13 +467,18 @@ destroy_producer(struct lua_State *L, producer_t *producer) {
     if (producer->rd_producer != NULL) {
         /* Destroy handle */
         coio_call(wait_producer_destroy, producer->rd_producer);
+        producer->rd_producer = NULL;
     }
 
-    if (producer->poller != NULL)
+    if (producer->poller != NULL) {
         destroy_producer_poller(producer->poller);
+        producer->poller = NULL;
+    }
 
-    if (producer->event_queues != NULL)
+    if (producer->event_queues != NULL) {
         destroy_event_queues(L, producer->event_queues);
+        producer->event_queues = NULL;
+    }
 
     free(producer);
 }

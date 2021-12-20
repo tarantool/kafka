@@ -574,8 +574,10 @@ wait_consumer_destroy(va_list args) {
 
 void
 consumer_destroy(struct lua_State *L, consumer_t *consumer) {
-    if (consumer->topics != NULL)
+    if (consumer->topics != NULL) {
         rd_kafka_topic_partition_list_destroy(consumer->topics);
+        consumer->topics = NULL;
+    }
 
     /*
      * Here we close consumer and only then destroys other stuff.
@@ -587,13 +589,18 @@ consumer_destroy(struct lua_State *L, consumer_t *consumer) {
         /* Destroy handle */
         // FIXME: kafka_destroy hangs forever
         coio_call(wait_consumer_destroy, consumer->rd_consumer);
+        consumer->rd_consumer = NULL;
     }
 
-    if (consumer->poller != NULL)
+    if (consumer->poller != NULL) {
         destroy_consumer_poller(consumer->poller);
+        consumer->poller = NULL;
+    }
 
-    if (consumer->event_queues != NULL)
+    if (consumer->event_queues != NULL) {
         destroy_event_queues(L, consumer->event_queues);
+        consumer->event_queues = NULL;
+    }
 
     free(consumer);
 }
