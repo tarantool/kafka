@@ -579,19 +579,6 @@ consumer_destroy(struct lua_State *L, consumer_t *consumer) {
         consumer->topics = NULL;
     }
 
-    /*
-     * Here we close consumer and only then destroys other stuff.
-     * Otherwise raise condition is possible when e.g.
-     * event queue is destroyed but consumer still receives logs, errors, etc.
-     * Only topics should be destroyed.
-     */
-    if (consumer->rd_consumer != NULL) {
-        /* Destroy handle */
-        // FIXME: kafka_destroy hangs forever
-        coio_call(wait_consumer_destroy, consumer->rd_consumer);
-        consumer->rd_consumer = NULL;
-    }
-
     if (consumer->poller != NULL) {
         destroy_consumer_poller(consumer->poller);
         consumer->poller = NULL;
@@ -600,6 +587,13 @@ consumer_destroy(struct lua_State *L, consumer_t *consumer) {
     if (consumer->event_queues != NULL) {
         destroy_event_queues(L, consumer->event_queues);
         consumer->event_queues = NULL;
+    }
+
+    if (consumer->rd_consumer != NULL) {
+        /* Destroy handle */
+        // FIXME: kafka_destroy hangs forever
+        coio_call(wait_consumer_destroy, consumer->rd_consumer);
+        consumer->rd_consumer = NULL;
     }
 
     free(consumer);
