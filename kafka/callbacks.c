@@ -301,17 +301,11 @@ rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic
  */
 
 event_queues_t *new_event_queues() {
-    event_queues_t *event_queues = malloc(sizeof(event_queues_t));
-    event_queues->error_queue = NULL;
+    event_queues_t *event_queues = calloc(1, sizeof(event_queues_t));
     event_queues->error_cb_ref = LUA_REFNIL;
-    event_queues->log_queue = NULL;
     event_queues->log_cb_ref = LUA_REFNIL;
-    event_queues->stats_queue = NULL;
     event_queues->stats_cb_ref = LUA_REFNIL;
-    event_queues->delivery_queue = NULL;
     event_queues->rebalance_cb_ref = LUA_REFNIL;
-    event_queues->rebalance_queue = NULL;
-    event_queues->consume_queue = NULL;
     return event_queues;
 }
 
