@@ -141,6 +141,10 @@ local function dump_conf()
     return consumer:dump_conf()
 end
 
+local function metadata(timeout_ms)
+    return consumer:metadata({timeout_ms = timeout_ms})
+end
+
 local function close()
     log.info("closing consumer")
     local _, err = consumer:close()
@@ -162,4 +166,5 @@ return {
     get_stats = get_stats,
     get_rebalances = get_rebalances,
     dump_conf = dump_conf,
+    metadata = metadata,
 }

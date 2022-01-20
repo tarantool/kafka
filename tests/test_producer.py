@@ -136,6 +136,33 @@ def test_producer_dump_conf():
     server.call("producer.close", [])
 
 
+def test_producer_metadata():
+    server = get_server()
+
+    server.call("producer.create", [KAFKA_HOST])
+
+    time.sleep(2)
+
+    response = server.call("producer.metadata", [])
+    assert 'orig_broker_name' in response[0]
+    assert 'orig_broker_id' in response[0]
+    assert 'brokers' in response[0]
+    assert 'topics' in response[0]
+    assert 'host' in response[0]['brokers'][0]
+    assert 'port' in response[0]['brokers'][0]
+    assert 'id' in response[0]['brokers'][0]
+
+    response = server.call("producer.metadata", [0])
+    assert tuple(response) == (None, 'Local: Timed out')
+
+    server.call("producer.close", [])
+
+    server.call("producer.create", ["badhost:8080"])
+    response = server.call("producer.metadata", [200])
+    assert tuple(response) == (None, 'Local: Broker transport failure')
+    server.call("producer.close", [])
+
+
 def test_producer_should_log_debug():
     server = get_server()
 

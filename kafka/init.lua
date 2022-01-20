@@ -2,6 +2,8 @@ local log = require("log")
 local fiber = require('fiber')
 local tnt_kafka = require("kafka.tntkafka")
 
+local DEFAULT_TIMEOUT_MS = 2000
+
 local Consumer = {}
 
 Consumer.__index = Consumer
@@ -203,6 +205,19 @@ function Consumer:dump_conf()
     return self._consumer:dump_conf()
 end
 
+function Consumer:metadata(options)
+    if self._consumer == nil then
+        return
+    end
+
+    local timeout_ms = DEFAULT_TIMEOUT_MS
+    if options ~= nil and options.timeout_ms ~= nil then
+        timeout_ms = options.timeout_ms
+    end
+
+    return self._consumer:metadata(timeout_ms)
+end
+
 local Producer = {}
 
 Producer.__index = Producer
@@ -357,6 +372,24 @@ function Producer:dump_conf()
         return
     end
     return self._producer:dump_conf()
+end
+
+function Producer:metadata(options)
+    if self._producer == nil then
+        return
+    end
+
+    local timeout_ms = DEFAULT_TIMEOUT_MS
+    if options ~= nil and options.timeout_ms ~= nil then
+        timeout_ms = options.timeout_ms
+    end
+
+    local topic
+    if options ~= nil and options.topic ~= nil then
+        topic = options.topic
+    end
+
+    return self._producer:metadata(topic, timeout_ms)
 end
 
 function Producer:close()

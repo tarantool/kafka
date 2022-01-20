@@ -79,6 +79,10 @@ local function get_stats()
     return stats
 end
 
+local function metadata(timeout_ms, topic)
+    return producer:metadata({timeout_ms = timeout_ms, topic = topic})
+end
+
 local function close()
     local _, err = producer:close()
     if err ~= nil then
@@ -95,4 +99,5 @@ return {
     get_stats = get_stats,
     close = close,
     dump_conf = dump_conf,
+    metadata = metadata,
 }

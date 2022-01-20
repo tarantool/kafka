@@ -1,5 +1,6 @@
 #include <lua.h>
 #include <common.h>
+#include <assert.h>
 
 const char* const consumer_label = "__tnt_kafka_consumer";
 const char* const consumer_msg_label = "__tnt_kafka_consumer_msg";
@@ -25,7 +26,8 @@ lua_librdkafka_version(struct lua_State *L) {
     return 1;
 }
 
-int lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk) {
+int
+lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk) {
     if (rk != NULL) {
         const rd_kafka_conf_t *conf = rd_kafka_conf(rk);
         if (conf == NULL)
@@ -46,4 +48,141 @@ int lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk) {
         return 1;
     }
     return 0;
+}
+
+static ssize_t
+wait_librdkafka_metadata(va_list args) {
+    rd_kafka_t *rk = va_arg(args, rd_kafka_t *);
+    int all_topics = va_arg(args, int);
+    rd_kafka_topic_t *only_rkt = va_arg(args, rd_kafka_topic_t *);
+    const struct rd_kafka_metadata **metadatap = va_arg(args, const struct rd_kafka_metadata **);
+    int timeout_ms = va_arg(args, int);
+    return rd_kafka_metadata(rk, all_topics, only_rkt, metadatap, timeout_ms);
+}
+
+int
+lua_librdkafka_metadata(struct lua_State *L, rd_kafka_t *rk, rd_kafka_topic_t *only_rkt, int timeout_ms) {
+    assert(rk != NULL);
+
+    int all_topics = 0;
+    if (only_rkt == NULL)
+    {
+        all_topics = 1;
+    }
+
+    const struct rd_kafka_metadata *metadatap;
+    rd_kafka_resp_err_t err = coio_call(wait_librdkafka_metadata, rk, all_topics, only_rkt, &metadatap, timeout_ms);
+
+    if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+        lua_pushnil(L);
+        lua_pushstring(L, rd_kafka_err2str(err));
+        return 2;
+    }
+
+    lua_newtable(L); // metadata
+
+    lua_pushliteral(L, "brokers"); // metadata.brokers
+    lua_createtable(L, metadatap->broker_cnt, 0);
+    for (int i = 0; i < metadatap->broker_cnt; i++) {
+        lua_pushnumber(L, i + 1); // metadata.brokers[i]
+        lua_createtable(L, 0, 3);
+
+        lua_pushliteral(L, "id"); // metadata.brokers[i].id
+        lua_pushnumber(L, metadatap->brokers[i].id);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "port"); // metadata.brokers[i].port
+        lua_pushnumber(L, metadatap->brokers[i].port);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "host"); // metadata.brokers[i].host
+        lua_pushstring(L, metadatap->brokers[i].host);
+        lua_settable(L, -3);
+
+        lua_settable(L, -3); // metadata.brokers[i]
+    }
+
+    lua_settable(L, -3); // metadata.brokers
+
+    lua_pushliteral(L, "topics"); // metadata.topics
+    lua_createtable(L, metadatap->topic_cnt, 0);
+    for (int i = 0; i < metadatap->topic_cnt; i++) {
+        lua_pushnumber(L, i + 1); // metadata.topics[i]
+        lua_createtable(L, 0, 4);
+
+        lua_pushliteral(L, "topic"); // metadata.topics[i].topic
+        lua_pushstring(L, metadatap->topics[i].topic);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "partitions"); // metadata.topics[i].partitions
+        lua_createtable(L, 0, metadatap->topics[i].partition_cnt);
+
+        for (int j = 0; j < metadatap->topics[i].partition_cnt; j++) {
+            lua_pushnumber(L, j + 1); // metadata.topics[i].partitions[j]
+            lua_createtable(L, 0, 8);
+
+            lua_pushliteral(L, "id"); // metadata.topics[i].partitions[j].id
+            lua_pushnumber(L, metadatap->topics[i].partitions[j].id);
+            lua_settable(L, -3);
+
+            lua_pushliteral(L, "leader"); // metadata.topics[i].partitions[j].leader
+            lua_pushnumber(L, metadatap->topics[i].partitions[j].leader);
+            lua_settable(L, -3);
+
+            if (metadatap->topics[i].partitions[j].err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+                lua_pushliteral(L, "error_code"); // metadata.topics[i].partitions[j].error_code
+                lua_pushnumber(L, metadatap->topics[i].partitions[j].err);
+                lua_settable(L, -3);
+
+                lua_pushliteral(L, "error"); // metadata.topics[i].partitions[j].error
+                lua_pushstring(L, rd_kafka_err2str(metadatap->topics[i].partitions[j].err));
+                lua_settable(L, -3);
+            }
+
+            lua_pushliteral(L, "isr"); // metadata.topics[i].partitions[j].isr
+            lua_createtable(L, metadatap->topics[i].partitions[j].isr_cnt, 0);
+            for (int k = 0; k < metadatap->topics[i].partitions[j].isr_cnt; k++) {
+                lua_pushnumber(L, k + 1); // metadata.topics[i].partitions[j].isr[k]
+                lua_pushnumber(L, metadatap->topics[i].partitions[j].isrs[k]);
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3); // metadata.topics[i].partitions[j].isr
+
+            lua_pushliteral(L, "replicas"); // metadata.topics[i].partitions[j].replicas
+            lua_createtable(L, metadatap->topics[i].partitions[j].replica_cnt, 0);
+            for (int k = 0; k < metadatap->topics[i].partitions[j].replica_cnt; k++) {
+                lua_pushnumber(L, k + 1); // metadata.topics[i].partitions[j].replicas[k]
+                lua_pushnumber(L, metadatap->topics[i].partitions[j].replicas[k]);
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3); // metadata.topics[i].partitions[j].replicas
+            lua_settable(L, -3); // metadata.topics[i].partitions[j]
+        }
+
+        lua_settable(L, -3); // metadata.topics[i].partitions
+
+        if (metadatap->topics[i].err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+            lua_pushliteral(L, "error_code"); // metadata.topics[i].error_code
+            lua_pushnumber(L, metadatap->topics[i].err);
+            lua_settable(L, -3);
+
+            lua_pushliteral(L, "error"); // metadata.topics[i].error
+            lua_pushstring(L, rd_kafka_err2str(metadatap->topics[i].err));
+            lua_settable(L, -3);
+        }
+
+        lua_settable(L, -3); // metadata.topics[i]
+    }
+    lua_settable(L, -3); // metadata.topics
+
+    lua_pushliteral(L, "orig_broker_id"); // metadata.orig_broker_id
+    lua_pushinteger(L, metadatap->orig_broker_id);
+    lua_settable(L, -3);
+
+    lua_pushliteral(L, "orig_broker_name"); // metadata.orig_broker_name
+    lua_pushstring(L, metadatap->orig_broker_name);
+    lua_settable(L, -3);
+
+    rd_kafka_metadata_destroy(metadatap);
+    return 1;
 }

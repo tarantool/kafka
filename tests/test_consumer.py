@@ -246,6 +246,29 @@ def test_consumer_dump_conf():
         assert 'compression.codec' in response[0]
 
 
+def test_consumer_metadata():
+    server = get_server()
+
+    with create_consumer(server, KAFKA_HOST):
+        time.sleep(2)
+
+        response = server.call("consumer.metadata", [])
+        assert 'orig_broker_name' in response[0]
+        assert 'orig_broker_id' in response[0]
+        assert 'brokers' in response[0]
+        assert 'topics' in response[0]
+        assert 'host' in response[0]['brokers'][0]
+        assert 'port' in response[0]['brokers'][0]
+        assert 'id' in response[0]['brokers'][0]
+
+        response = server.call("consumer.metadata", [0])
+        assert tuple(response) == (None, 'Local: Timed out')
+
+    with create_consumer(server, "badhost:9090"):
+        response = server.call("consumer.metadata", [0])
+        assert tuple(response) == (None, 'Local: Broker transport failure')
+
+
 def test_consumer_should_log_debug():
     server = get_server()
 

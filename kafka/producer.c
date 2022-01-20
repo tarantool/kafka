@@ -124,7 +124,7 @@ add_producer_topics(producer_topics_t *topics, rd_kafka_topic_t *element) {
     return 0;
 }
 
-rd_kafka_topic_t *
+static rd_kafka_topic_t *
 find_producer_topic_by_name(producer_topics_t *topics, const char *name) {
     rd_kafka_topic_t *topic;
     for (int i = 0; i < topics->count; i++) {
@@ -655,4 +655,28 @@ lua_create_producer(struct lua_State *L) {
     luaL_getmetatable(L, producer_label);
     lua_setmetatable(L, -2);
     return 1;
+}
+
+int
+lua_producer_metadata(struct lua_State *L) {
+    producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+    if (producer_p == NULL || *producer_p == NULL)
+        return 0;
+
+    if ((*producer_p)->rd_producer != NULL) {
+        rd_kafka_topic_t *topic = NULL;
+        const char *topic_name = lua_tostring(L, 2);
+        if (topic_name != NULL) {
+            topic = find_producer_topic_by_name((*producer_p)->topics, topic_name);
+            if (topic == NULL) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "Topic \"%s\" is not found", topic_name);
+                return 2;
+            }
+        }
+
+        int timeout_ms = lua_tointeger(L, 3);
+        return lua_librdkafka_metadata(L, (*producer_p)->rd_producer, topic, timeout_ms);
+    }
+    return 0;
 }

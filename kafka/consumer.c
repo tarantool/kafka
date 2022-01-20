@@ -788,3 +788,16 @@ lua_consumer_dump_conf(struct lua_State *L) {
         return lua_librdkafka_dump_conf(L, (*consumer_p)->rd_consumer);
     return 0;
 }
+
+int
+lua_consumer_metadata(struct lua_State *L) {
+    consumer_t **consumer_p = (consumer_t **)luaL_checkudata(L, 1, consumer_label);
+    if (consumer_p == NULL || *consumer_p == NULL)
+        return 0;
+
+    if ((*consumer_p)->rd_consumer != NULL) {
+        int timeout_ms = lua_tointeger(L, 2);
+        return lua_librdkafka_metadata(L, (*consumer_p)->rd_consumer, NULL, timeout_ms);
+    }
+    return 0;
+}

@@ -27,6 +27,9 @@ int lua_librdkafka_version(struct lua_State *L);
 
 int lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk);
 
+int
+lua_librdkafka_metadata(struct lua_State *L, rd_kafka_t *rk, rd_kafka_topic_t *only_rkt, int timeout_ms);
+
 /**
  * Push native lua error with code -3
  */
