@@ -83,6 +83,10 @@ local function metadata(timeout_ms, topic)
     return producer:metadata({timeout_ms = timeout_ms, topic = topic})
 end
 
+local function list_groups(timeout_ms)
+    return producer:list_groups({timeout_ms = timeout_ms})
+end
+
 local function close()
     local _, err = producer:close()
     if err ~= nil then
@@ -100,4 +104,5 @@ return {
     close = close,
     dump_conf = dump_conf,
     metadata = metadata,
+    list_groups = list_groups,
 }

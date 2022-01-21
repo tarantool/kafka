@@ -186,3 +186,112 @@ lua_librdkafka_metadata(struct lua_State *L, rd_kafka_t *rk, rd_kafka_topic_t *o
     rd_kafka_metadata_destroy(metadatap);
     return 1;
 }
+
+static ssize_t
+wait_librdkafka_list_groups(va_list args) {
+    rd_kafka_t *rk = va_arg(args, rd_kafka_t *);
+    const char *group = va_arg(args, const char *);
+    const struct rd_kafka_group_list **grplistp = va_arg(args, const struct rd_kafka_group_list **);
+    int timeout_ms = va_arg(args, int);
+    return rd_kafka_list_groups(rk, group, grplistp, timeout_ms);
+}
+
+int
+lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *group, int timeout_ms) {
+    const struct rd_kafka_group_list *grplistp;
+    rd_kafka_resp_err_t err = coio_call(wait_librdkafka_list_groups, rk, group, &grplistp, timeout_ms);
+
+    if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+        lua_pushnil(L);
+        lua_pushstring(L, rd_kafka_err2str(err));
+        return 2;
+    }
+
+    lua_createtable(L, grplistp->group_cnt, 0);
+    for (int i = 0; i < grplistp->group_cnt; i++) {
+        lua_pushnumber(L, i + 1);
+        lua_createtable(L, 0, 8);
+
+        lua_pushliteral(L, "broker");
+        lua_createtable(L, 0, 3);
+
+        lua_pushliteral(L, "id");
+        lua_pushnumber(L, grplistp->groups[i].broker.id);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "port");
+        lua_pushnumber(L, grplistp->groups[i].broker.port);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "host");
+        lua_pushstring(L, grplistp->groups[i].broker.host);
+        lua_settable(L, -3);
+
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "group");
+        lua_pushstring(L, grplistp->groups[i].group);
+        lua_settable(L, -3);
+
+        if (grplistp->groups[i].err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+            lua_pushliteral(L, "error_code");
+            lua_pushnumber(L, grplistp->groups[i].err);
+            lua_settable(L, -3);
+
+            lua_pushliteral(L, "error");
+            lua_pushstring(L, rd_kafka_err2str(grplistp->groups[i].err));
+            lua_settable(L, -3);
+        }
+
+        lua_pushliteral(L, "state");
+        lua_pushstring(L, grplistp->groups[i].state);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "protocol_type");
+        lua_pushstring(L, grplistp->groups[i].protocol_type);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "protocol");
+        lua_pushstring(L, grplistp->groups[i].protocol);
+        lua_settable(L, -3);
+
+        lua_pushliteral(L, "members");
+        lua_createtable(L, grplistp->groups[i].member_cnt, 0);
+        for (int j = 0; j < grplistp->groups[i].member_cnt; j++) {
+            lua_pushnumber(L, j + 1);
+            lua_createtable(L, 0, 8);
+
+            lua_pushliteral(L, "member_id");
+            lua_pushstring(L, grplistp->groups[i].members[j].member_id);
+            lua_settable(L, -3);
+
+            lua_pushliteral(L, "client_id");
+            lua_pushstring(L, grplistp->groups[i].members[j].client_id);
+            lua_settable(L, -3);
+
+            lua_pushliteral(L, "client_host");
+            lua_pushstring(L, grplistp->groups[i].members[j].client_host);
+            lua_settable(L, -3);
+
+            lua_pushliteral(L, "member_metadata");
+            lua_pushlstring(L,
+                   grplistp->groups[i].members[j].member_metadata,
+                   grplistp->groups[i].members[j].member_metadata_size);
+            lua_settable(L, -3);
+
+            lua_pushliteral(L, "member_assignment");
+            lua_pushlstring(L,
+                   grplistp->groups[i].members[j].member_assignment,
+                   grplistp->groups[i].members[j].member_assignment_size);
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        lua_settable(L, -3);
+    }
+
+    rd_kafka_group_list_destroy(grplistp);
+    return 1;
+}

@@ -680,3 +680,17 @@ lua_producer_metadata(struct lua_State *L) {
     }
     return 0;
 }
+
+int
+lua_producer_list_groups(struct lua_State *L) {
+    producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+    if (producer_p == NULL || *producer_p == NULL)
+        return 0;
+
+    if ((*producer_p)->rd_producer != NULL) {
+        const char *group = lua_tostring(L, 2);
+        int timeout_ms = lua_tointeger(L, 3);
+        return lua_librdkafka_list_groups(L, (*producer_p)->rd_producer, group, timeout_ms);
+    }
+    return 0;
+}

@@ -264,7 +264,15 @@ def test_consumer_metadata():
         response = server.call("consumer.metadata", [0])
         assert tuple(response) == (None, 'Local: Timed out')
 
+        response = server.call("consumer.list_groups", [])
+        assert response[0] is not None
+        response = server.call("consumer.list_groups", [0])
+        assert tuple(response) == (None, 'Local: Timed out')
+
     with create_consumer(server, "badhost:9090"):
+        response = server.call("consumer.metadata", [0])
+        assert tuple(response) == (None, 'Local: Broker transport failure')
+
         response = server.call("consumer.metadata", [0])
         assert tuple(response) == (None, 'Local: Broker transport failure')
 

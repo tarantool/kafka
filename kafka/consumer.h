@@ -60,4 +60,6 @@ int lua_consumer_dump_conf(struct lua_State *L);
 
 int lua_consumer_metadata(struct lua_State *L);
 
+int lua_consumer_list_groups(struct lua_State *L);
+
 #endif //TNT_KAFKA_CONSUMER_H

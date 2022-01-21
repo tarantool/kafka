@@ -801,3 +801,17 @@ lua_consumer_metadata(struct lua_State *L) {
     }
     return 0;
 }
+
+int
+lua_consumer_list_groups(struct lua_State *L) {
+    consumer_t **consumer_p = (consumer_t **)luaL_checkudata(L, 1, consumer_label);
+    if (consumer_p == NULL || *consumer_p == NULL)
+        return 0;
+
+    if ((*consumer_p)->rd_consumer != NULL) {
+        const char *group = lua_tostring(L, 2);
+        int timeout_ms = lua_tointeger(L, 3);
+        return lua_librdkafka_list_groups(L, (*consumer_p)->rd_consumer, group, timeout_ms);
+    }
+    return 0;
+}

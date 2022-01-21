@@ -145,6 +145,10 @@ local function metadata(timeout_ms)
     return consumer:metadata({timeout_ms = timeout_ms})
 end
 
+local function list_groups(timeout_ms)
+    return consumer:list_groups({timeout_ms = timeout_ms})
+end
+
 local function close()
     log.info("closing consumer")
     local _, err = consumer:close()
@@ -167,4 +171,5 @@ return {
     get_rebalances = get_rebalances,
     dump_conf = dump_conf,
     metadata = metadata,
+    list_groups = list_groups,
 }

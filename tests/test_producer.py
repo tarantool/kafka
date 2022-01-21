@@ -152,6 +152,11 @@ def test_producer_metadata():
     assert 'port' in response[0]['brokers'][0]
     assert 'id' in response[0]['brokers'][0]
 
+    response = server.call("producer.list_groups", [])
+    assert response[0] is not None
+    response = server.call("producer.list_groups", [0])
+    assert tuple(response) == (None, 'Local: Timed out')
+
     response = server.call("producer.metadata", [0])
     assert tuple(response) == (None, 'Local: Timed out')
 
@@ -160,6 +165,8 @@ def test_producer_metadata():
     server.call("producer.create", ["badhost:8080"])
     response = server.call("producer.metadata", [200])
     assert tuple(response) == (None, 'Local: Broker transport failure')
+    response = server.call("producer.list_groups", [200])
+    assert response[0] is None
     server.call("producer.close", [])
 
 

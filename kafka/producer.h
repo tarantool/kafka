@@ -63,4 +63,6 @@ int lua_producer_dump_conf(struct lua_State *L);
 
 int lua_producer_metadata(struct lua_State *L);
 
+int lua_producer_list_groups(struct lua_State *L);
+
 #endif //TNT_KAFKA_PRODUCER_H

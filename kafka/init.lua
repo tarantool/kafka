@@ -218,6 +218,24 @@ function Consumer:metadata(options)
     return self._consumer:metadata(timeout_ms)
 end
 
+function Consumer:list_groups(options)
+    if self._consumer == nil then
+        return
+    end
+
+    local timeout_ms = DEFAULT_TIMEOUT_MS
+    if options ~= nil and options.timeout_ms ~= nil then
+        timeout_ms = options.timeout_ms
+    end
+
+    local group
+    if options ~= nil and options.timeout_ms ~= nil then
+        group = options.group
+    end
+
+    return self._consumer:list_groups(group, timeout_ms)
+end
+
 local Producer = {}
 
 Producer.__index = Producer
@@ -390,6 +408,24 @@ function Producer:metadata(options)
     end
 
     return self._producer:metadata(topic, timeout_ms)
+end
+
+function Producer:list_groups(options)
+    if self._producer == nil then
+        return
+    end
+
+    local timeout_ms = DEFAULT_TIMEOUT_MS
+    if options ~= nil and options.timeout_ms ~= nil then
+        timeout_ms = options.timeout_ms
+    end
+
+    local group
+    if options ~= nil and options.timeout_ms ~= nil then
+        group = options.group
+    end
+
+    return self._producer:list_groups(group, timeout_ms)
 end
 
 function Producer:close()
