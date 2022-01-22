@@ -121,6 +121,8 @@ new_queue() {
 
 void
 destroy_queue(queue_t *queue) {
+    if (queue == NULL)
+        return;
     pthread_mutex_destroy(&queue->lock);
     free(queue);
 }

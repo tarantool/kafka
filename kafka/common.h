@@ -21,8 +21,6 @@ const char* const consumer_label;
 const char* const consumer_msg_label;
 const char* const producer_label;
 
-int save_pushstring_wrapped(struct lua_State *L);
-
 int lua_librdkafka_version(struct lua_State *L);
 
 int lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk);

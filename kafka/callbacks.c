@@ -38,41 +38,37 @@ new_log_msg(int level, const char *fac, const char *buf) {
 
 void
 destroy_log_msg(log_msg_t *msg) {
-    if (msg->fac != NULL) {
+    if (msg->fac != NULL)
         free(msg->fac);
-    }
-    if (msg->buf != NULL) {
+    if (msg->buf != NULL)
         free(msg->buf);
-    }
     free(msg);
 }
 
 void
 log_callback(const rd_kafka_t *rd_kafka, int level, const char *fac, const char *buf) {
     event_queues_t *event_queues = rd_kafka_opaque(rd_kafka);
-    if (event_queues != NULL && event_queues->log_queue != NULL) {
+    if (event_queues != NULL && event_queues->queues[LOG_QUEUE] != NULL) {
         log_msg_t *msg = new_log_msg(level, fac, buf);
-        if (msg != NULL) {
-            if (queue_push(event_queues->log_queue, msg) != 0) {
-                destroy_log_msg(msg);
-            }
+        if (msg != NULL && queue_push(event_queues->queues[LOG_QUEUE], msg) != 0) {
+            destroy_log_msg(msg);
         }
     }
 }
 
 int
 stats_callback(rd_kafka_t *rd_kafka, char *json, size_t json_len, void *opaque) {
-	(void)opaque;
-	(void)json_len;
-	event_queues_t *event_queues = rd_kafka_opaque(rd_kafka);
-	if (event_queues != NULL && event_queues->stats_queue != NULL) {
-		if (json != NULL) {
-			if (queue_push(event_queues->stats_queue, json) != 0)
-				return 0; // destroy json after return
-			return 1; // json should be freed manually
-		}
-	}
-	return 0;
+    (void)opaque;
+    (void)json_len;
+    event_queues_t *event_queues = rd_kafka_opaque(rd_kafka);
+    if (event_queues != NULL && event_queues->queues[STATS_QUEUE] != NULL) {
+        if (json != NULL) {
+            if (queue_push(event_queues->queues[STATS_QUEUE], json) != 0)
+                return 0; // destroy json after return
+            return 1; // json should be freed manually
+        }
+    }
+    return 0;
 }
 
 /**
@@ -82,9 +78,8 @@ stats_callback(rd_kafka_t *rd_kafka, char *json, size_t json_len, void *opaque) 
 error_msg_t *
 new_error_msg(int err, const char *reason) {
     error_msg_t *msg = malloc(sizeof(error_msg_t));
-    if (msg == NULL) {
+    if (msg == NULL)
         return NULL;
-    }
     msg->err = err;
     msg->reason = malloc(sizeof(char) * strlen(reason) + 1);
     strcpy(msg->reason, reason);
@@ -93,23 +88,42 @@ new_error_msg(int err, const char *reason) {
 
 void
 destroy_error_msg(error_msg_t *msg) {
-    if (msg->reason != NULL) {
+    if (msg->reason != NULL)
         free(msg->reason);
-    }
     free(msg);
 }
 
 void
 error_callback(rd_kafka_t *UNUSED(rd_kafka), int err, const char *reason, void *opaque) {
     event_queues_t *event_queues = opaque;
-    if (event_queues != NULL && event_queues->error_queue != NULL) {
+    if (event_queues != NULL && event_queues->queues[ERROR_QUEUE] != NULL) {
         error_msg_t *msg = new_error_msg(err, reason);
-        if (msg != NULL) {
-            if (queue_push(event_queues->error_queue, msg) != 0) {
-                destroy_error_msg(msg);
-            }
-        }
+        if (msg != NULL && queue_push(event_queues->queues[ERROR_QUEUE], msg) != 0)
+            destroy_error_msg(msg);
     }
+}
+
+int
+push_log_cb_args(struct lua_State *L, const log_msg_t *msg)
+{
+    lua_pushstring(L, msg->fac);
+    lua_pushstring(L, msg->buf);
+    lua_pushinteger(L, msg->level);
+    return 3;
+}
+
+int
+push_stats_cb_args(struct lua_State *L, const char *msg)
+{
+    lua_pushstring(L, msg);
+    return 1;
+}
+
+int
+push_errors_cb_args(struct lua_State *L, const error_msg_t *msg)
+{
+    lua_pushstring(L, msg->reason);
+    return 1;
 }
 
 /**
@@ -248,7 +262,7 @@ rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic
 
                 pthread_mutex_lock(&msg->lock);
 
-                if (queue_push(event_queues->rebalance_queue, msg) == 0) {
+                if (queue_push(event_queues->queues[REBALANCE_QUEUE], msg) == 0) {
                     // waiting while main TX thread invokes rebalance callback
                     pthread_cond_wait(&msg->sync, &msg->lock);
                 }
@@ -268,7 +282,7 @@ rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic
 
                 pthread_mutex_lock(&msg->lock);
 
-                if (queue_push(event_queues->rebalance_queue, msg) == 0) {
+                if (queue_push(event_queues->queues[REBALANCE_QUEUE], msg) == 0) {
                     // waiting while main TX thread invokes rebalance callback
                     pthread_cond_wait(&msg->sync, &msg->lock);
                 }
@@ -287,7 +301,7 @@ rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic
 
                 pthread_mutex_lock(&msg->lock);
 
-                if (queue_push(event_queues->rebalance_queue, msg) == 0) {
+                if (queue_push(event_queues->queues[REBALANCE_QUEUE], msg) == 0) {
                     // waiting while main TX thread invokes rebalance callback
                     pthread_cond_wait(&msg->sync, &msg->lock);
                 }
@@ -308,10 +322,8 @@ rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic
 
 event_queues_t *new_event_queues() {
     event_queues_t *event_queues = calloc(1, sizeof(event_queues_t));
-    event_queues->error_cb_ref = LUA_REFNIL;
-    event_queues->log_cb_ref = LUA_REFNIL;
-    event_queues->stats_cb_ref = LUA_REFNIL;
-    event_queues->rebalance_cb_ref = LUA_REFNIL;
+    for (int i = 0; i < MAX_QUEUE; i++)
+        event_queues->cb_refs[i] = LUA_REFNIL;
     return event_queues;
 }
 
@@ -320,72 +332,55 @@ void destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
         rd_kafka_message_t *msg = NULL;
         while (true) {
             msg = queue_pop(event_queues->consume_queue);
-            if (msg == NULL) {
+            if (msg == NULL)
                 break;
-            }
             rd_kafka_message_destroy(msg);
         }
         destroy_queue(event_queues->consume_queue);
-    }
-    if (event_queues->log_queue != NULL) {
-        log_msg_t *msg = NULL;
-        while (true) {
-            msg = queue_pop(event_queues->log_queue);
-            if (msg == NULL) {
-                break;
-            }
-            destroy_log_msg(msg);
-        }
-        destroy_queue(event_queues->log_queue);
-    }
-    if (event_queues->stats_queue != NULL) {
-        char *stats_json = NULL;
-        while (true) {
-            stats_json = queue_pop(event_queues->stats_queue);
-            if (stats_json == NULL)
-                break;
-        }
-        destroy_queue(event_queues->stats_queue);
-    }
-    if (event_queues->error_queue != NULL) {
-        error_msg_t *msg = NULL;
-        while (true) {
-            msg = queue_pop(event_queues->error_queue);
-            if (msg == NULL) {
-                break;
-            }
-            destroy_error_msg(msg);
-        }
-        destroy_queue(event_queues->error_queue);
     }
     if (event_queues->delivery_queue != NULL) {
         dr_msg_t *msg = NULL;
         while (true) {
             msg = queue_pop(event_queues->delivery_queue);
-            if (msg == NULL) {
+            if (msg == NULL)
                 break;
-            }
             destroy_dr_msg(msg);
         }
         destroy_queue(event_queues->delivery_queue);
     }
-    if (event_queues->rebalance_queue != NULL) {
-        rebalance_msg_t *msg = NULL;
+
+    for (int i = 0; i < MAX_QUEUE; i++) {
+        if (event_queues->queues[i] == NULL)
+            continue;
         while (true) {
-            msg = queue_pop(event_queues->rebalance_queue);
-            if (msg == NULL) {
+            void *msg = queue_pop(event_queues->queues[i]);
+            if (msg == NULL)
                 break;
+
+            switch (i) {
+                case LOG_QUEUE:
+                    destroy_log_msg(msg);
+                    break;
+                case STATS_QUEUE:
+                    break;
+                case ERROR_QUEUE:
+                    destroy_error_msg(msg);
+                    break;
+                case REBALANCE_QUEUE: {
+                    rebalance_msg_t *rebalance_msg = msg;
+                    pthread_mutex_lock(&rebalance_msg->lock);
+                    // allowing background thread proceed rebalancing
+                    pthread_cond_signal(&rebalance_msg->sync);
+                    pthread_mutex_unlock(&rebalance_msg->lock);
+                    break;
+                }
             }
-            pthread_mutex_lock(&msg->lock);
-            // allowing background thread proceed rebalancing
-            pthread_cond_signal(&msg->sync);
-            pthread_mutex_unlock(&msg->lock);
         }
-        destroy_queue(event_queues->rebalance_queue);
+        destroy_queue(event_queues->queues[i]);
     }
-    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->error_cb_ref);
-    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->log_cb_ref);
-    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->stats_cb_ref);
-    luaL_unref(L, LUA_REGISTRYINDEX, event_queues->rebalance_cb_ref);
+
+    for (int i = 0; i < MAX_QUEUE; i++)
+        luaL_unref(L, LUA_REGISTRYINDEX, event_queues->cb_refs[i]);
+
     free(event_queues);
 }

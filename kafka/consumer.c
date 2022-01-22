@@ -242,137 +242,9 @@ lua_consumer_poll_msg(struct lua_State *L) {
     return 1;
 }
 
-int
-lua_consumer_poll_logs(struct lua_State *L) {
-    if (lua_gettop(L) != 2)
-        luaL_error(L, "Usage: count, err = consumer:poll_logs(limit)");
-
-    consumer_t *consumer = lua_check_consumer(L, 1);
-    if (consumer->event_queues == NULL || consumer->event_queues->log_queue == NULL || consumer->event_queues->log_cb_ref == LUA_REFNIL) {
-        lua_pushnumber(L, 0);
-        lua_pushliteral(L, "Consumer poll logs error: callback for logs is not set");
-        return 2;
-    }
-
-    int limit = lua_tonumber(L, 2);
-    log_msg_t *msg = NULL;
-    int count = 0;
-    char *err_str = NULL;
-    while (count < limit) {
-        msg = queue_pop(consumer->event_queues->log_queue) ;
-        if (msg == NULL) {
-            break;
-        }
-        count++;
-        lua_rawgeti(L, LUA_REGISTRYINDEX, consumer->event_queues->log_cb_ref);
-        lua_pushstring(L, msg->fac);
-        lua_pushstring(L, msg->buf);
-        lua_pushnumber(L, (double)msg->level);
-        /* do the call (3 arguments, 0 result) */
-        if (lua_pcall(L, 3, 0, 0) != 0) {
-            err_str = (char *)lua_tostring(L, -1);
-        }
-
-        destroy_log_msg(msg);
-
-        if (err_str != NULL) {
-            break;
-        }
-    }
-    lua_pushnumber(L, (double)count);
-    if (err_str != NULL) {
-        lua_pushstring(L, err_str);
-    } else {
-        lua_pushnil(L);
-    }
-    return 2;
-}
-
-int
-lua_consumer_poll_stats(struct lua_State *L) {
-    if (lua_gettop(L) != 2)
-        luaL_error(L, "Usage: count, err = consumer:poll_stats(limit)");
-
-    consumer_t *consumer = lua_check_consumer(L, 1);
-    if (consumer->event_queues == NULL ||
-        consumer->event_queues->stats_queue == NULL ||
-        consumer->event_queues->stats_cb_ref == LUA_REFNIL) {
-        lua_pushnumber(L, 0);
-        lua_pushliteral(L, "Consumer poll stats error: callback for logs is not set");
-        return 2;
-    }
-
-    int limit = lua_tonumber(L, 2);
-    char *json = NULL;
-    int count = 0;
-    char *err_str = NULL;
-    while (count < limit) {
-        json = queue_pop(consumer->event_queues->stats_queue);
-        if (json == NULL)
-            break;
-        count++;
-        lua_rawgeti(L, LUA_REGISTRYINDEX, consumer->event_queues->stats_cb_ref);
-        lua_pushstring(L, json);
-        /* do the call (1 arguments, 0 result) */
-        if (lua_pcall(L, 1, 0, 0) != 0)
-            err_str = (char*)lua_tostring(L, -1);
-
-        free(json);
-
-        if (err_str != NULL)
-            break;
-    }
-    lua_pushnumber(L, (double)count);
-    if (err_str != NULL) {
-        lua_pushstring(L, err_str);
-        return 2;
-    }
-    return 1;
-}
-
-int
-lua_consumer_poll_errors(struct lua_State *L) {
-    if (lua_gettop(L) != 2)
-        luaL_error(L, "Usage: count, err = consumer:poll_errors(limit)");
-
-    consumer_t *consumer = lua_check_consumer(L, 1);
-    if (consumer->event_queues == NULL || consumer->event_queues->error_queue == NULL || consumer->event_queues->error_cb_ref == LUA_REFNIL) {
-        lua_pushnumber(L, 0);
-        lua_pushliteral(L, "Consumer poll errors error: callback for logs is not set");
-        return 2;
-    }
-
-    int limit = lua_tonumber(L, 2);
-    error_msg_t *msg = NULL;
-    int count = 0;
-    char *err_str = NULL;
-    while (count < limit) {
-        msg = queue_pop(consumer->event_queues->error_queue) ;
-        if (msg == NULL) {
-            break;
-        }
-        count++;
-        lua_rawgeti(L, LUA_REGISTRYINDEX, consumer->event_queues->error_cb_ref);
-        lua_pushstring(L, msg->reason);
-        /* do the call (1 arguments, 0 result) */
-        if (lua_pcall(L, 1, 0, 0) != 0) {
-            err_str = (char *)lua_tostring(L, -1);
-        }
-
-        destroy_error_msg(msg);
-
-        if (err_str != NULL) {
-            break;
-        }
-    }
-    lua_pushnumber(L, (double)count);
-    if (err_str != NULL) {
-        lua_pushstring(L, err_str);
-    } else {
-        lua_pushnil(L);
-    }
-    return 2;
-}
+LUA_RDKAFKA_POLL_FUNC(consumer, poll_logs, LOG_QUEUE, destroy_log_msg, push_log_cb_args)
+LUA_RDKAFKA_POLL_FUNC(consumer, poll_stats, STATS_QUEUE, free, push_stats_cb_args)
+LUA_RDKAFKA_POLL_FUNC(consumer, poll_errors, ERROR_QUEUE, destroy_error_msg, push_errors_cb_args)
 
 int
 lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, rebalance_msg_t *msg) {
@@ -460,7 +332,9 @@ lua_consumer_poll_rebalances(struct lua_State *L) {
         luaL_error(L, "Usage: count, err = consumer:poll_rebalances(limit)");
 
     consumer_t *consumer = lua_check_consumer(L, 1);
-    if (consumer->event_queues == NULL || consumer->event_queues->rebalance_queue == NULL || consumer->event_queues->rebalance_cb_ref == LUA_REFNIL) {
+    if (consumer->event_queues == NULL ||
+        consumer->event_queues->queues[REBALANCE_QUEUE] == NULL ||
+        consumer->event_queues->cb_refs[REBALANCE_QUEUE] == LUA_REFNIL) {
         lua_pushnumber(L, 0);
         lua_pushliteral(L, "Consumer poll rebalances error: callback for rebalance is not set");
         return 2;
@@ -472,7 +346,7 @@ lua_consumer_poll_rebalances(struct lua_State *L) {
     char *err_str = NULL;
 
     while (count < limit) {
-        msg = queue_pop(consumer->event_queues->rebalance_queue);
+        msg = queue_pop(consumer->event_queues->queues[REBALANCE_QUEUE]);
         if (msg == NULL) {
             break;
         }
@@ -481,7 +355,7 @@ lua_consumer_poll_rebalances(struct lua_State *L) {
         pthread_mutex_lock(&msg->lock);
 
         // push callback on stack
-        lua_rawgeti(L, LUA_REGISTRYINDEX, consumer->event_queues->rebalance_cb_ref);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, consumer->event_queues->cb_refs[REBALANCE_QUEUE]);
 
         // push rebalance args on stack
         if (lua_prepare_rebalance_callback_args_on_stack(L, msg) == 0) {
@@ -674,44 +548,29 @@ lua_create_consumer(struct lua_State *L) {
     event_queues_t *event_queues = new_event_queues();
     event_queues->consume_queue = new_queue();
 
-    lua_pushstring(L, "error_callback");
-    lua_gettable(L, -2 );
-    if (lua_isfunction(L, -1)) {
-        event_queues->error_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-        event_queues->error_queue = new_queue();
-        rd_kafka_conf_set_error_cb(rd_config, error_callback);
-    } else {
-        lua_pop(L, 1);
-    }
-
-    lua_pushstring(L, "log_callback");
-    lua_gettable(L, -2);
-    if (lua_isfunction(L, -1)) {
-        event_queues->log_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-        event_queues->log_queue = new_queue();
-        rd_kafka_conf_set_log_cb(rd_config, log_callback);
-    } else {
-        lua_pop(L, 1);
-    }
-
-    lua_pushstring(L, "stats_callback");
-    lua_gettable(L, -2);
-    if (lua_isfunction(L, -1)) {
-        event_queues->stats_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-        event_queues->stats_queue = new_queue();
-        rd_kafka_conf_set_stats_cb(rd_config, stats_callback);
-    } else {
-        lua_pop(L, 1);
-    }
-
-    lua_pushstring(L, "rebalance_callback");
-    lua_gettable(L, -2 );
-    if (lua_isfunction(L, -1)) {
-        event_queues->rebalance_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
-        event_queues->rebalance_queue = new_queue();
-        rd_kafka_conf_set_rebalance_cb(rd_config, rebalance_callback);
-    } else {
-        lua_pop(L, 1);
+    for (int i = 0; i < MAX_QUEUE; i++) {
+        lua_pushstring(L, queue2str[i]);
+        lua_gettable(L, -2 );
+        if (lua_isfunction(L, -1)) {
+            event_queues->cb_refs[i] = luaL_ref(L, LUA_REGISTRYINDEX);
+            event_queues->queues[i] = new_queue();
+            switch (i) {
+                case LOG_QUEUE:
+                    rd_kafka_conf_set_log_cb(rd_config, log_callback);
+                    break;
+                case ERROR_QUEUE:
+                    rd_kafka_conf_set_error_cb(rd_config, error_callback);
+                    break;
+                case STATS_QUEUE:
+                    rd_kafka_conf_set_stats_cb(rd_config, stats_callback);
+                    break;
+                case REBALANCE_QUEUE:
+                    rd_kafka_conf_set_rebalance_cb(rd_config, rebalance_callback);
+                    break;
+            }
+        } else {
+            lua_pop(L, 1);
+        }
     }
 
     rd_kafka_conf_set_opaque(rd_config, event_queues);
