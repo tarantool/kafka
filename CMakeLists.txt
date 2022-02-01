@@ -31,7 +31,7 @@ message("Found OPENSSL version: ${OPENSSL_VERSION}")
 if(STATIC_BUILD)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
-        COMMAND ./configure --enable-ssl --prefix=${CMAKE_BINARY_DIR}/librdkafka
+        COMMAND ./configure --enable-ssl --disable-zstd --prefix=${CMAKE_BINARY_DIR}/librdkafka
         COMMAND make -j
         COMMAND make install
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
