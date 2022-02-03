@@ -23,7 +23,9 @@ consumer_poll_loop(void *arg) {
     consumer_poller_t *poller = arg;
     event_queues_t *event_queues = rd_kafka_opaque(poller->rd_consumer);
     rd_kafka_message_t *rd_msg = NULL;
+    rd_kafka_resp_err_t err = RD_KAFKA_RESP_ERR_NO_ERROR;
     int count = 0;
+    int errors_count = 0;
     int should_stop = 0;
 
     while (true) {
@@ -42,9 +44,19 @@ consumer_poll_loop(void *arg) {
         {
             rd_msg = rd_kafka_consumer_poll(poller->rd_consumer, 1000);
             if (rd_msg != NULL) {
-                if (rd_msg->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-                    // FIXME: push errors to error queue?
+                err = rd_msg->err;
+                if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+                    // free rdkafka message instantly to prevent hang on close / destroy consumer
                     rd_kafka_message_destroy(rd_msg);
+                    rd_msg = NULL;
+
+                    error_callback(poller->rd_consumer, err, rd_kafka_err2str(err), event_queues);
+
+                    errors_count++;
+                    if (errors_count >= 50) {
+                        // throttling calls with 100ms sleep when there are too many errors one by one
+                        usleep(100000);
+                    }
                 } else {
                     msg_t *msg = new_consumer_msg(rd_msg);
                     // free rdkafka message instantly to prevent hang on close / destroy consumer
@@ -58,6 +70,7 @@ consumer_poll_loop(void *arg) {
 
                     pthread_mutex_unlock(&event_queues->consume_queue->lock);
 
+                    errors_count = 0;
                     if (count >= 50000) {
                         // throttling calls with 100ms sleep when there are too many messages pending in queue
                         usleep(100000);
