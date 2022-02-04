@@ -417,18 +417,34 @@ static ssize_t
 wait_consumer_close(va_list args) {
     rd_kafka_t *rd_consumer = va_arg(args, rd_kafka_t *);
     rd_kafka_message_t *rd_msg = NULL;
+    rd_kafka_resp_err_t err = RD_KAFKA_RESP_ERR_NO_ERROR;
+    int errors_count = 0;
+
     // cleanup consumer queue, because at other way close hangs forever
     while (true) {
         rd_msg = rd_kafka_consumer_poll(rd_consumer, 1000);
         if (rd_msg != NULL) {
+            err = rd_msg->err;
             rd_kafka_message_destroy(rd_msg);
+            if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+                errors_count++;
+                error_callback(rd_consumer, err, rd_kafka_err2str(err), rd_kafka_opaque(rd_consumer));
+                // most likely there is no connection to the broker,
+                // so this cycle will go on forever without this condition
+                if (errors_count == 5) {
+                    break;
+                }
+            } else {
+                errors_count = 0;
+            }
         } else {
             break;
         }
     }
 
-    if (rd_kafka_consumer_close(rd_consumer) != RD_KAFKA_RESP_ERR_NO_ERROR) {
-        // FIXME: maybe send errors to error queue?
+    err = rd_kafka_consumer_close(rd_consumer);
+    if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+        error_callback(rd_consumer, err, rd_kafka_err2str(err), rd_kafka_opaque(rd_consumer));
         return -1;
     }
 

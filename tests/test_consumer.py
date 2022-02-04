@@ -4,6 +4,7 @@ import json
 import asyncio
 from contextlib import contextmanager
 
+import pytest
 from aiokafka import AIOKafkaProducer
 import tarantool
 
@@ -354,3 +355,11 @@ def test_consumer_should_continue_consuming_from_last_committed_offset():
             "test3",
             "test4",
         }
+
+
+@pytest.mark.timeout(5)
+def test_consumer_should_be_closed():
+    server = get_server()
+
+    with create_consumer(server, '127.0.0.1:12345', {"group.id": None}):
+        pass

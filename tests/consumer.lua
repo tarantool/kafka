@@ -43,7 +43,11 @@ local function create(brokers, additional_opts)
     }
     if additional_opts ~= nil then
         for key, value in pairs(additional_opts) do
-            options[key] = value
+            if value == nil then
+                options[key] = nil
+            else
+                options[key] = value
+            end
         end
     end
     consumer, err = tnt_kafka.Consumer.create({
