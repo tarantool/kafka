@@ -58,20 +58,36 @@ def write_into_kafka(topic, messages):
 def test_consumer_should_consume_msgs():
     message1 = {
         "key": "test1",
-        "value": "test1"
+        "value": "test1",
     }
 
     message2 = {
         "key": "test1",
-        "value": "test2"
+        "value": "test2",
     }
 
     message3 = {
         "key": "test1",
-        "value": "test3"
+        "value": "test3",
     }
 
-    write_into_kafka("test_consume", (message1, message2, message3))
+    message4 = {
+        "key": "",
+        "value": "test4",
+    }
+
+    message5 = {
+        "key": "",
+        "value": "",
+    }
+
+    write_into_kafka("test_consume", (
+        message1,
+        message2,
+        message3,
+        message4,
+        message5,
+    ))
 
     server = get_server()
 
@@ -83,7 +99,8 @@ def test_consumer_should_consume_msgs():
         assert set(*response) == {
             "test1",
             "test2",
-            "test3"
+            "test3",
+            "test4",
         }
 
 

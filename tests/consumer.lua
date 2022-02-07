@@ -103,7 +103,7 @@ local function consume(timeout)
 
             local msg = out:get()
             if msg ~= nil then
-                log.info(msg)
+                log.info("%s", msg)
                 log.info("got msg with topic='%s' partition='%d' offset='%d' key='%s' value='%s'", msg:topic(), msg:partition(), msg:offset(), msg:key(), msg:value())
                 table.insert(consumed, msg:value())
                 local err = consumer:store_offset(msg)

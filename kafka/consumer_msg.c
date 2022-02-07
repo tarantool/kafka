@@ -6,6 +6,8 @@
 
 #include <consumer_msg.h>
 
+static const char null_literal[] = "NULL";
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Consumer Message
@@ -46,11 +48,10 @@ int
 lua_consumer_msg_key(struct lua_State *L) {
     msg_t *msg = lua_check_consumer_msg(L, 1);
 
-    if (msg->key_len <= 0 || msg->key == NULL || ((char*)msg->key) == NULL) {
-        return 0;
-    }
-
-    lua_pushlstring(L, msg->key, msg->key_len);
+    if (msg->key_len <= 0 || msg->key == NULL)
+        lua_pushnil(L);
+    else
+        lua_pushlstring(L, msg->key, msg->key_len);
     return 1;
 }
 
@@ -58,11 +59,10 @@ int
 lua_consumer_msg_value(struct lua_State *L) {
     msg_t *msg = lua_check_consumer_msg(L, 1);
 
-    if (msg->value_len <= 0 || msg->value == NULL || ((char*)msg->value) == NULL) {
-        return 0;
-    }
-
-    lua_pushlstring(L, msg->value, msg->value_len);
+    if (msg->value_len <= 0 || msg->value == NULL)
+        lua_pushnil(L);
+    else
+        lua_pushlstring(L, msg->value, msg->value_len);
     return 1;
 }
 
@@ -70,11 +70,11 @@ int
 lua_consumer_msg_tostring(struct lua_State *L) {
     msg_t *msg = lua_check_consumer_msg(L, 1);
 
-    size_t key_len = msg->key_len <= 0 ? 5: msg->key_len + 1;
+    size_t key_len = msg->key_len <= 0 ? sizeof(null_literal) : msg->key_len + 1;
     char key[key_len];
 
-    if (msg->key_len <= 0 || msg->key == NULL || ((char*)msg->key) == NULL) {
-        strncpy(key, "NULL", 5);
+    if (msg->key_len <= 0 || msg->key == NULL) {
+        memcpy(key, null_literal, sizeof(null_literal));
     } else {
         strncpy(key, msg->key, msg->key_len + 1);
         if (key[msg->key_len] != '\0') {
@@ -82,11 +82,11 @@ lua_consumer_msg_tostring(struct lua_State *L) {
         }
     }
 
-    size_t value_len = msg->value_len <= 0 ? 5: msg->value_len + 1;
+    size_t value_len = msg->value_len <= 0 ? sizeof(null_literal) : msg->value_len + 1;
     char value[value_len];
 
-    if (msg->value_len <= 0 || msg->value == NULL || ((char*)msg->value) == NULL) {
-        strncpy(value, "NULL", 5);
+    if (msg->value_len <= 0 || msg->value == NULL) {
+        memcpy(value, null_literal, sizeof(null_literal));
     } else {
         strncpy(value, msg->value, msg->value_len + 1);
         if (value[msg->value_len] != '\0') {
@@ -118,30 +118,22 @@ lua_consumer_msg_gc(struct lua_State *L) {
 
 msg_t *
 new_consumer_msg(rd_kafka_message_t *rd_message) {
-    msg_t *msg;
-    msg = malloc(sizeof(msg_t));
+    size_t message_size = sizeof(msg_t) + rd_message->len + rd_message->key_len;
+    msg_t *msg = calloc(message_size, 1);
     msg->topic = rd_message->rkt;
     msg->partition = rd_message->partition;
-    msg->value = NULL;
-    msg->value_len = 0;
-    msg->key = NULL;
-    msg->key_len = 0;
-    msg->offset = 0;
+    msg->value = (void*)(msg + sizeof(msg_t));
+    msg->key = (void*)(msg + sizeof(msg_t) + rd_message->len);
 
     // value
-    if (rd_message->len > 0) {
-        msg->value = malloc(rd_message->len);
+    if (rd_message->len > 0)
         memcpy(msg->value, rd_message->payload, rd_message->len);
-    }
     msg->value_len = rd_message->len;
 
     // key
-    if (rd_message->key_len > 0) {
-        msg->key = malloc(rd_message->key_len);
+    if (rd_message->key_len > 0)
         memcpy(msg->key, rd_message->key, rd_message->key_len);
-    }
     msg->key_len = rd_message->key_len;
-
     msg->offset = rd_message->offset;
 
     return msg;
@@ -149,18 +141,8 @@ new_consumer_msg(rd_kafka_message_t *rd_message) {
 
 void
 destroy_consumer_msg(msg_t *msg) {
-    if (msg == NULL) {
+    if (msg == NULL)
         return;
-    }
-
-    if (msg->key != NULL) {
-        free(msg->key);
-    }
-
-    if (msg->value != NULL) {
-        free(msg->value);
-    }
-
     free(msg);
 
     return;
