@@ -122,8 +122,8 @@ new_consumer_msg(rd_kafka_message_t *rd_message) {
     msg_t *msg = calloc(message_size, 1);
     msg->topic = rd_message->rkt;
     msg->partition = rd_message->partition;
-    msg->value = (void*)(msg + sizeof(msg_t));
-    msg->key = (void*)(msg + sizeof(msg_t) + rd_message->len);
+    msg->value = (char*)msg + sizeof(msg_t);
+    msg->key = (char*)msg + sizeof(msg_t) + rd_message->len;
 
     // value
     if (rd_message->len > 0)

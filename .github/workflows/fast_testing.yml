@@ -51,11 +51,13 @@ jobs:
         run: tarantoolctl rocks STATIC_BUILD=ON make
 
       - name: Run tarantool application
-        run: TT_LOG=tarantool.log tarantool tests/app.lua &
+        run: TT_LOG=tarantool.log tarantool tests/app.lua > output.log 2>&1 &
 
       - name: Run test
         run: KAFKA_HOST=localhost:9092 pytest tests
 
       - name: Print Tarantool logs
         if: always()
-        run: cat tarantool.log
+        run: |
+          cat tarantool.log
+          cat output.log
