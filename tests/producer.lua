@@ -1,5 +1,6 @@
 local box = require('box')
 local log = require('log')
+local json = require('json')
 local tnt_kafka = require('kafka')
 
 local TOPIC_NAME = "test_producer"
@@ -54,11 +55,16 @@ end
 
 local function produce(messages)
     for _, message in ipairs(messages) do
-        local err = producer:produce({topic = TOPIC_NAME, key = message, value = message})
+        local err = producer:produce({
+            topic = TOPIC_NAME,
+            key = message.key,
+            value = message.value,
+            headers = message.headers,
+        })
         if err ~= nil then
-            log.error("got error '%s' while sending value '%s'", err, message)
+            log.error("got error '%s' while sending value '%s'", err, json.encode(message))
         else
-            log.error("successfully sent value '%s'", message)
+            log.error("successfully sent value '%s'", json.encode(message))
         end
     end
 end

@@ -179,13 +179,12 @@ lua_producer_msg_delivery_poll(struct lua_State *L) {
 
     while (events_limit > callbacks_count) {
         dr_msg = queue_lockfree_pop(producer->event_queues->delivery_queue);
-        if (dr_msg == NULL) {
+        if (dr_msg == NULL)
             break;
-        }
         callbacks_count += 1;
         lua_rawgeti(L, LUA_REGISTRYINDEX, dr_msg->dr_callback);
         if (dr_msg->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-            lua_pushstring(L, (char *)rd_kafka_err2str(dr_msg->err));
+            lua_pushstring(L, rd_kafka_err2str(dr_msg->err));
         } else {
             lua_pushnil(L);
         }
@@ -220,16 +219,16 @@ lua_producer_produce(struct lua_State *L) {
     if (lua_gettop(L) != 2 || !lua_istable(L, 2))
         luaL_error(L, "Usage: err = producer:produce(msg)");
 
-    lua_pushstring(L, "topic");
+    lua_pushliteral(L, "topic");
     lua_gettable(L, -2 );
     const char *topic = lua_tostring(L, -1);
     lua_pop(L, 1);
     if (topic == NULL) {
-        lua_pushstring(L, "producer message must contains non nil 'topic' key");
+        lua_pushliteral(L, "producer message must contains non nil 'topic' key");
         return 1;
     }
 
-    lua_pushstring(L, "key");
+    lua_pushliteral(L, "key");
     lua_gettable(L, -2 );
     size_t key_len;
     // rd_kafka will copy key so no need to worry about this cast
@@ -237,7 +236,7 @@ lua_producer_produce(struct lua_State *L) {
 
     lua_pop(L, 1);
 
-    lua_pushstring(L, "value");
+    lua_pushliteral(L, "value");
     lua_gettable(L, -2 );
     size_t value_len;
     // rd_kafka will copy value so no need to worry about this cast
@@ -250,15 +249,45 @@ lua_producer_produce(struct lua_State *L) {
         return 1;
     }
 
+    rd_kafka_headers_t *hdrs = NULL;
+    lua_pushliteral(L, "headers");
+    lua_gettable(L, -2 );
+    if (lua_istable(L, -1)) {
+        hdrs = rd_kafka_headers_new(8);
+        if (hdrs == NULL) {
+            lua_pushliteral(L, "failed to allocate kafka headers");
+            return 1;
+        }
+
+        lua_pushnil(L);
+        while (lua_next(L, -2) != 0) {
+            size_t hdr_value_len = 0;
+            const char *hdr_value = lua_tolstring(L, -1, &hdr_value_len);
+            size_t hdr_key_len = 0;
+            const char *hdr_key = lua_tolstring(L, -2, &hdr_key_len);
+
+            rd_kafka_resp_err_t err = rd_kafka_header_add(
+                    hdrs, hdr_key, hdr_key_len, hdr_value, hdr_value_len);
+            if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+                lua_pushliteral(L, "failed to add kafka headers");
+                goto error;
+            }
+
+            lua_pop(L, 1);
+        }
+    }
+
+    lua_pop(L, 1);
+
     // create delivery callback queue if got msg id
     dr_msg_t *dr_msg = NULL;
-    lua_pushstring(L, "dr_callback");
-    lua_gettable(L, -2 );
+    lua_pushliteral(L, "dr_callback");
+    lua_gettable(L, -2);
     if (lua_isfunction(L, -1)) {
         dr_msg = new_dr_msg(luaL_ref(L, LUA_REGISTRYINDEX), RD_KAFKA_RESP_ERR_NO_ERROR);
         if (dr_msg == NULL) {
             lua_pushliteral(L, "failed to create callback message");
-            return 1;
+            goto error;
         }
     } else {
         lua_pop(L, 1);
@@ -272,20 +301,45 @@ lua_producer_produce(struct lua_State *L) {
     if (rd_topic == NULL) {
         rd_topic = rd_kafka_topic_new(producer->rd_producer, topic, NULL);
         if (rd_topic == NULL) {
-            lua_pushstring(L, rd_kafka_err2str(rd_kafka_errno2err(errno)));
-            return 1;
+            lua_pushstring(L, rd_kafka_err2str(rd_kafka_last_error()));
+            goto error;
         }
         if (add_producer_topics(producer->topics, rd_topic) != 0) {
             lua_pushstring(L, "Unexpected error: failed to add new topic to topic list!");
-            return 1;
+            goto error;
         }
     }
 
-    if (rd_kafka_produce(rd_topic, -1, RD_KAFKA_MSG_F_COPY, value, value_len, key, key_len, dr_msg) == -1) {
-        lua_pushstring(L, rd_kafka_err2str(rd_kafka_errno2err(errno)));
+    rd_kafka_resp_err_t err = RD_KAFKA_RESP_ERR_NO_ERROR;
+    if (hdrs == NULL) {
+        int rc = rd_kafka_produce(rd_topic, -1, RD_KAFKA_MSG_F_COPY, value, value_len, key, key_len, dr_msg);
+        if (rc != 0)
+            err = rd_kafka_last_error();
+    } else {
+        err = rd_kafka_producev(
+                producer->rd_producer,
+                RD_KAFKA_V_RKT(rd_topic),
+                RD_KAFKA_V_PARTITION(-1),
+                RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
+                RD_KAFKA_V_VALUE(value, value_len),
+                RD_KAFKA_V_KEY(key, key_len),
+                RD_KAFKA_V_HEADERS(hdrs),
+                RD_KAFKA_V_OPAQUE(dr_msg),
+                RD_KAFKA_V_END);
+        if (err != RD_KAFKA_RESP_ERR_NO_ERROR)
+            rd_kafka_headers_destroy(hdrs);
+    }
+
+    if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+        lua_pushstring(L, rd_kafka_err2str(err));
         return 1;
     }
     return 0;
+
+error:
+    if (hdrs != NULL)
+        rd_kafka_headers_destroy(hdrs);
+    return 1;
 }
 
 static ssize_t

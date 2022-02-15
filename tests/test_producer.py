@@ -25,13 +25,13 @@ def test_producer_should_produce_msgs():
 
     server.call("producer.create", [KAFKA_HOST])
 
-    server.call("producer.produce", (
-        (
-            "1",
-            "2",
-            "3",
-        ),
-    ))
+    messages = [
+        {'key': '1', 'value': '1'},
+        {'key': '2', 'value': '2'},
+        {'key': '3', 'value': '3'},
+        {'key': '4', 'value': '4', 'headers': {'header1_key': 'header1_value', 'header2_key': 'header2_value'}},
+    ]
+    server.call("producer.produce", [messages])
 
     loop = asyncio.get_event_loop()
 
@@ -51,10 +51,15 @@ def test_producer_should_produce_msgs():
             try:
                 # Consume messages
                 async for msg in consumer:
-                    kafka_output.append({
+                    kafka_msg = {
                         'key': msg.key if msg.key is None else msg.key.decode('utf8'),
                         'value': msg.value if msg.value is None else msg.value.decode('utf8')
-                    })
+                    }
+                    if msg.headers:
+                        kafka_msg['headers'] = {}
+                        for k, v in msg.headers:
+                            kafka_msg['headers'][k] = v.decode('utf8')
+                    kafka_output.append(kafka_msg)
 
             finally:
                 # Will leave consumer group; perform autocommit if enabled.
@@ -65,20 +70,7 @@ def test_producer_should_produce_msgs():
         except asyncio.TimeoutError:
             pass
 
-        assert kafka_output == [
-            {
-                "key": "1",
-                "value": "1"
-            },
-            {
-                "key": "2",
-                "value": "2"
-            },
-            {
-                "key": "3",
-                "value": "3"
-            },
-        ]
+        assert kafka_output == messages
 
     loop.run_until_complete(test())
 
