@@ -220,7 +220,7 @@ lua_producer_produce(struct lua_State *L) {
         luaL_error(L, "Usage: err = producer:produce(msg)");
 
     lua_pushliteral(L, "topic");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     const char *topic = lua_tostring(L, -1);
     lua_pop(L, 1);
     if (topic == NULL) {
@@ -229,7 +229,7 @@ lua_producer_produce(struct lua_State *L) {
     }
 
     lua_pushliteral(L, "key");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     size_t key_len;
     // rd_kafka will copy key so no need to worry about this cast
     char *key = (char *)lua_tolstring(L, -1, &key_len);
@@ -237,7 +237,7 @@ lua_producer_produce(struct lua_State *L) {
     lua_pop(L, 1);
 
     lua_pushliteral(L, "value");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     size_t value_len;
     // rd_kafka will copy value so no need to worry about this cast
     char *value = (char *)lua_tolstring(L, -1, &value_len);
@@ -251,7 +251,7 @@ lua_producer_produce(struct lua_State *L) {
 
     rd_kafka_headers_t *hdrs = NULL;
     lua_pushliteral(L, "headers");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     if (lua_istable(L, -1)) {
         hdrs = rd_kafka_headers_new(8);
         if (hdrs == NULL) {
@@ -443,7 +443,7 @@ lua_create_producer(struct lua_State *L) {
         luaL_error(L, "Usage: producer, err = create_producer(conf)");
 
     lua_pushstring(L, "brokers");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     const char *brokers = lua_tostring(L, -1);
     lua_pop(L, 1);
     if (brokers == NULL) {
@@ -496,7 +496,7 @@ lua_create_producer(struct lua_State *L) {
             continue;
 
         lua_pushstring(L, queue2str[i]);
-        lua_gettable(L, -2 );
+        lua_gettable(L, -2);
         if (lua_isfunction(L, -1)) {
             event_queues->cb_refs[i] = luaL_ref(L, LUA_REGISTRYINDEX);
             event_queues->queues[i] = new_queue();
@@ -519,7 +519,7 @@ lua_create_producer(struct lua_State *L) {
     rd_kafka_conf_set_opaque(rd_config, event_queues);
 
     lua_pushstring(L, "options");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     if (lua_istable(L, -1)) {
         lua_pushnil(L);
         // stack now contains: -1 => nil; -2 => table

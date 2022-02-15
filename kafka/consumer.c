@@ -531,7 +531,7 @@ lua_create_consumer(struct lua_State *L) {
         luaL_error(L, "Usage: consumer, err = create_consumer(conf)");
 
     lua_pushstring(L, "brokers");
-    lua_gettable(L, -2 );
+    lua_gettable(L, -2);
     const char *brokers = lua_tostring(L, -1);
     lua_pop(L, 1);
     if (brokers == NULL) {
@@ -579,7 +579,7 @@ lua_create_consumer(struct lua_State *L) {
 
     for (int i = 0; i < MAX_QUEUE; i++) {
         lua_pushstring(L, queue2str[i]);
-        lua_gettable(L, -2 );
+        lua_gettable(L, -2);
         if (lua_isfunction(L, -1)) {
             event_queues->cb_refs[i] = luaL_ref(L, LUA_REGISTRYINDEX);
             event_queues->queues[i] = new_queue();

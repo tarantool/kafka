@@ -54,7 +54,7 @@ def write_into_kafka(topic, messages):
                 if 'headers' in msg:
                     headers = []
                     for k, v in msg['headers'].items():
-                        headers.append((k, v.encode('utf-8')))
+                        headers.append((k, v.encode('utf-8') if v is not None else v))
                 await producer.send_and_wait(
                     topic,
                     value=msg['value'].encode('utf-8'),
@@ -83,7 +83,7 @@ def test_consumer_should_consume_msgs():
     message3 = {
         "key": "test1",
         "value": "test3",
-        "headers": {"key1": "value1", "key2": "value2"},
+        "headers": {"key1": "value1", "key2": "value2", "nullable": None},
     }
 
     message4 = {
@@ -122,7 +122,7 @@ def test_consumer_should_consume_msgs():
             if msg['value'] == 'test1':
                 assert msg['key'] == 'test1'
             elif msg['value'] == 'test3':
-                assert msg['headers'] == {'key1': 'value1', 'key2': 'value2'}
+                assert msg['headers'] == {'key1': 'value1', 'key2': 'value2', 'nullable': None}
 
 
 def test_consumer_should_consume_msgs_from_multiple_topics():

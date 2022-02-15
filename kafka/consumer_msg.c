@@ -85,7 +85,7 @@ lua_consumer_msg_headers(struct lua_State *L) {
         if (val != NULL)
             lua_pushlstring(L, val, size);
         else
-            lua_pushliteral(L, "NULL"); // replace with box.NULL ?
+            *(void **)luaL_pushcdata(L, luaL_ctypeid(L, "void *")) = NULL;
         lua_settable(L, -3);
     }
     return 1;

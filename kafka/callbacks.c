@@ -344,7 +344,7 @@ void destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
             msg = queue_pop(event_queues->delivery_queue);
             if (msg == NULL)
                 break;
-            // FIXME: unref callback?
+            luaL_unref(L, LUA_REGISTRYINDEX, msg->dr_callback);
             destroy_dr_msg(msg);
         }
         destroy_queue(event_queues->delivery_queue);
