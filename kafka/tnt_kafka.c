@@ -45,6 +45,7 @@ luaopen_kafka_tntkafka(lua_State *L) {
     static const struct luaL_Reg consumer_msg_methods [] = {
             {"topic", lua_consumer_msg_topic},
             {"partition", lua_consumer_msg_partition},
+            {"headers", lua_consumer_msg_headers},
             {"offset", lua_consumer_msg_offset},
             {"key", lua_consumer_msg_key},
             {"value", lua_consumer_msg_value},

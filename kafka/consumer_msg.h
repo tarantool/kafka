@@ -13,6 +13,7 @@
  */
 typedef struct {
     rd_kafka_topic_t *topic;
+    rd_kafka_headers_t *headers;
     int32_t           partition;
     char              *value;
     size_t            value_len;
@@ -30,6 +31,8 @@ void destroy_consumer_msg(msg_t *msg);
 int lua_consumer_msg_topic(struct lua_State *L);
 
 int lua_consumer_msg_partition(struct lua_State *L);
+
+int lua_consumer_msg_headers(struct lua_State *L);
 
 int lua_consumer_msg_offset(struct lua_State *L);
 

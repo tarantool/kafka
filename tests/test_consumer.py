@@ -11,6 +11,14 @@ import tarantool
 KAFKA_HOST = os.getenv("KAFKA_HOST", "kafka:9092")
 
 
+def get_message_values(messages):
+    result = []
+    for msg in messages:
+        if 'value' in msg:
+            result.append(msg['value'])
+    return result
+
+
 def get_server():
     return tarantool.Connection("127.0.0.1", 3301,
                                 user="guest",
@@ -42,10 +50,16 @@ def write_into_kafka(topic, messages):
         try:
             # Produce message
             for msg in messages:
+                headers = None
+                if 'headers' in msg:
+                    headers = []
+                    for k, v in msg['headers'].items():
+                        headers.append((k, v.encode('utf-8')))
                 await producer.send_and_wait(
                     topic,
                     value=msg['value'].encode('utf-8'),
-                    key=msg['key'].encode('utf-8')
+                    key=msg['key'].encode('utf-8'),
+                    headers=headers,
                 )
 
         finally:
@@ -69,6 +83,7 @@ def test_consumer_should_consume_msgs():
     message3 = {
         "key": "test1",
         "value": "test3",
+        "headers": {"key1": "value1", "key2": "value2"},
     }
 
     message4 = {
@@ -94,14 +109,20 @@ def test_consumer_should_consume_msgs():
     with create_consumer(server, KAFKA_HOST, {"group.id": "should_consume_msgs"}):
         server.call("consumer.subscribe", [["test_consume"]])
 
-        response = server.call("consumer.consume", [10])
+        response = server.call("consumer.consume", [10])[0]
 
-        assert set(*response) == {
+        assert set(get_message_values(response)) == {
             "test1",
             "test2",
             "test3",
             "test4",
         }
+
+        for msg in filter(lambda x: 'value' in x, response):
+            if msg['value'] == 'test1':
+                assert msg['key'] == 'test1'
+            elif msg['value'] == 'test3':
+                assert msg['headers'] == {'key1': 'value1', 'key2': 'value2'}
 
 
 def test_consumer_should_consume_msgs_from_multiple_topics():
@@ -128,9 +149,9 @@ def test_consumer_should_consume_msgs_from_multiple_topics():
     with create_consumer(server, KAFKA_HOST, {"group.id": "should_consume_msgs_from_multiple_topics"}):
         server.call("consumer.subscribe", [["test_multi_consume_1", "test_multi_consume_2"]])
 
-        response = server.call("consumer.consume", [10])
+        response = server.call("consumer.consume", [10])[0]
 
-        assert set(*response) == {
+        assert set(get_message_values(response)) == {
             "test1",
             "test2",
             "test33"
@@ -160,9 +181,9 @@ def test_consumer_should_completely_unsubscribe_from_topics():
     with create_consumer(server, KAFKA_HOST, {"group.id": "should_completely_unsubscribe_from_topics"}):
         server.call("consumer.subscribe", [["test_unsubscribe"]])
 
-        response = server.call("consumer.consume", [10])
+        response = server.call("consumer.consume", [10])[0]
 
-        assert set(*response) == {
+        assert set(get_message_values(response)) == {
             "test1",
             "test2",
         }
@@ -206,9 +227,9 @@ def test_consumer_should_partially_unsubscribe_from_topics():
         write_into_kafka("test_unsub_partially_2", (message2, ))
 
         # waiting up to 30 seconds
-        response = server.call("consumer.consume", [30])
+        response = server.call("consumer.consume", [30])[0]
 
-        assert set(*response) == {
+        assert set(get_message_values(response)) == {
             "test1",
             "test2",
         }
@@ -218,9 +239,9 @@ def test_consumer_should_partially_unsubscribe_from_topics():
         write_into_kafka("test_unsub_partially_1", (message3, ))
         write_into_kafka("test_unsub_partially_2", (message4, ))
 
-        response = server.call("consumer.consume", [30])
+        response = server.call("consumer.consume", [30])[0]
 
-        assert set(*response) == {"test45"}
+        assert set(get_message_values(response)) == {"test45"}
 
 
 def test_consumer_should_log_errors():
@@ -351,9 +372,9 @@ def test_consumer_should_continue_consuming_from_last_committed_offset():
         write_into_kafka("test_consuming_from_last_committed_offset", (message2, ))
 
         # waiting up to 30 seconds
-        response = server.call("consumer.consume", [30])
+        response = server.call("consumer.consume", [30])[0]
 
-        assert set(*response) == {
+        assert set(get_message_values(response)) == {
             "test1",
             "test2",
         }
@@ -366,9 +387,9 @@ def test_consumer_should_continue_consuming_from_last_committed_offset():
         write_into_kafka("test_consuming_from_last_committed_offset", (message3, ))
         write_into_kafka("test_consuming_from_last_committed_offset", (message4, ))
 
-        response = server.call("consumer.consume", [30])
+        response = server.call("consumer.consume", [30])[0]
 
-        assert set(*response) == {
+        assert set(get_message_values(response)) == {
             "test3",
             "test4",
         }

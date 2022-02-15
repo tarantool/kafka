@@ -105,7 +105,14 @@ local function consume(timeout)
             if msg ~= nil then
                 log.info("%s", msg)
                 log.info("got msg with topic='%s' partition='%d' offset='%d' key='%s' value='%s'", msg:topic(), msg:partition(), msg:offset(), msg:key(), msg:value())
-                table.insert(consumed, msg:value())
+                table.insert(consumed, {
+                    value = msg:value(),
+                    key = msg:key(),
+                    topic = msg:topic(),
+                    partition = msg:partition(),
+                    offset = msg:offset(),
+                    headers = msg:headers(),
+                })
                 local err = consumer:store_offset(msg)
                 if err ~= nil then
                     log.error("got error '%s' while committing msg from topic '%s'", err, msg:topic())
