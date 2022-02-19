@@ -48,7 +48,9 @@ jobs:
         run: pip3 install -r tests/requirements.txt
 
       - name: Build module
-        run: tarantoolctl rocks STATIC_BUILD=ON make
+        run: |
+          export MAKEFLAGS=-j8
+          tarantoolctl rocks STATIC_BUILD=ON make
 
       - name: Run tarantool application
         run: TT_LOG=tarantool.log tarantool tests/app.lua > output.log 2>&1 &

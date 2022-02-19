@@ -10,8 +10,7 @@ set(MY_C_FLAGS "-Wall -Wextra -Werror -std=gnu11 -fno-strict-aliasing -Wno-depre
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_C_FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${MY_C_FLAGS} -ggdb3")
 
-set(Tarantool_FIND_REQUIRED ON)
-find_package(Tarantool)
+find_package(Tarantool REQUIRED)
 # Oracle Connector requires fiber_cond API added in 1.7.4-291
 string(REPLACE "-" "." tntver ${TARANTOOL_VERSION})
 if(${tntver} VERSION_LESS 1.7.4.291)
@@ -42,9 +41,12 @@ if(STATIC_BUILD)
         DEPENDS ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
     )
 
+    add_library(librdkafka_static INTERFACE)
+    target_include_directories(librdkafka_static INTERFACE ${CMAKE_BINARY_DIR}/librdkafka/include)
+    target_link_libraries(librdkafka_static INTERFACE ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a)
+    add_dependencies(librdkafka_static librdkafka.a)
 
-    set(RDKAFKA_LIBRARY  ${RDKAFKA_LIBRARY} ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a)
-    set(RDKAFKA_INCLUDE_DIR ${CMAKE_BINARY_DIR}/librdkafka/include)
+    set(RDKAFKA_LIBRARY ${RDKAFKA_LIBRARY} librdkafka_static)
 else()
     set(RDKAFKA_FIND_REQUIRED ON)
     find_package(RdKafka)
