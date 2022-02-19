@@ -31,8 +31,8 @@ if(STATIC_BUILD)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
         COMMAND ./configure --enable-ssl --disable-zstd --prefix=${CMAKE_BINARY_DIR}/librdkafka
-        COMMAND make -j
-        COMMAND make install
+        COMMAND $(MAKE) -j
+        COMMAND $(MAKE) install
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
         COMMENT "Building librdkafka"
         VERBATIM
