@@ -17,9 +17,9 @@
 
 #include <tarantool/module.h>
 
-const char* const consumer_label;
-const char* const consumer_msg_label;
-const char* const producer_label;
+extern const char* const consumer_label;
+extern const char* const consumer_msg_label;
+extern const char* const producer_label;
 
 int lua_librdkafka_version(struct lua_State *L);
 
