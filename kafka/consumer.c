@@ -419,6 +419,68 @@ lua_consumer_store_offset(struct lua_State *L) {
 }
 
 static ssize_t
+wait_consumer_seek_partitions(va_list args) {
+    rd_kafka_t *rk = va_arg(args, rd_kafka_t *);
+    rd_kafka_topic_partition_list_t *list = va_arg(args, rd_kafka_topic_partition_list_t *);
+    int timeout_ms = va_arg(args, int);
+    rd_kafka_error_t **err = va_arg(args, rd_kafka_error_t **);
+    *err = rd_kafka_seek_partitions(rk, list, timeout_ms);
+    return 0;
+}
+
+int
+lua_consumer_seek_partitions(struct lua_State *L) {
+    if (lua_gettop(L) != 3)
+        luaL_error(L, "Usage: err = consumer:seek_partitions({{topic, partition, offset}}, timeout_ms)");
+
+    consumer_t **consumer_p = luaL_checkudata(L, 1, consumer_label);
+    if (consumer_p == NULL || *consumer_p == NULL) {
+        lua_pushstring(L, "Broken consumer");
+        return 1;
+    }
+
+    luaL_checktype(L, 2, LUA_TTABLE);
+    int timeout_ms = luaL_checkint(L, 3);
+
+    size_t len = lua_objlen(L, 2);
+    rd_kafka_topic_partition_list_t *list = rd_kafka_topic_partition_list_new(len);
+    if (list == NULL)
+        luaL_error(L, "Out of memory: failed to allocate rd_kafka_topic_partition_list_t");
+
+    for (size_t i = 1; i <= len; i++) {
+        luaL_pushint64(L, i);
+        lua_gettable(L, 2);
+
+        luaL_pushint64(L, 1);
+        lua_gettable(L, -2);
+        const char *topic = lua_tostring(L, -1);
+        lua_pop(L, 1);
+
+        luaL_pushint64(L, 2);
+        lua_gettable(L, -2);
+        int32_t partition =  lua_tointeger(L, -1);
+        lua_pop(L, 1);
+
+        luaL_pushint64(L, 3);
+        lua_gettable(L, -2);
+        int64_t offset = luaL_toint64(L, -1);
+        lua_pop(L, 2);
+
+        rd_kafka_topic_partition_list_add(list, topic, partition)->offset = offset;
+    }
+
+    rd_kafka_error_t *err = NULL;
+    coio_call(wait_consumer_seek_partitions,
+              (*consumer_p)->rd_consumer, list, timeout_ms, &err);
+    rd_kafka_topic_partition_list_destroy(list);
+    if (err != NULL) {
+        lua_pushstring(L, rd_kafka_error_string(err));
+        return 1;
+    }
+    return 0;
+}
+
+static ssize_t
 wait_consumer_close(va_list args) {
     rd_kafka_t *rd_consumer = va_arg(args, rd_kafka_t *);
     rd_kafka_message_t *rd_msg = NULL;

@@ -187,6 +187,14 @@ function Consumer:close()
     return ok
 end
 
+local function get_timeout_from_options(options)
+    local timeout_ms = DEFAULT_TIMEOUT_MS
+    if type(options) == 'table' and options.timeout_ms ~= nil then
+        timeout_ms = options.timeout_ms
+    end
+    return timeout_ms
+end
+
 function Consumer:subscribe(topics)
     return self._consumer:subscribe(topics)
 end
@@ -211,6 +219,11 @@ function Consumer:resume()
     return self._consumer:resume()
 end
 
+function Consumer:seek_partitions(topic_partitions_list, options)
+    local timeout_ms = get_timeout_from_options(options)
+    return self._consumer:seek_partitions(topic_partitions_list, timeout_ms)
+end
+
 function Consumer:dump_conf()
     if self._consumer == nil then
         return
@@ -223,10 +236,7 @@ function Consumer:metadata(options)
         return
     end
 
-    local timeout_ms = DEFAULT_TIMEOUT_MS
-    if options ~= nil and options.timeout_ms ~= nil then
-        timeout_ms = options.timeout_ms
-    end
+    local timeout_ms = get_timeout_from_options(options)
 
     return self._consumer:metadata(timeout_ms)
 end
@@ -236,10 +246,7 @@ function Consumer:list_groups(options)
         return
     end
 
-    local timeout_ms = DEFAULT_TIMEOUT_MS
-    if options ~= nil and options.timeout_ms ~= nil then
-        timeout_ms = options.timeout_ms
-    end
+    local timeout_ms = get_timeout_from_options(options)
 
     local group
     if options ~= nil and options.group ~= nil then
@@ -410,10 +417,7 @@ function Producer:metadata(options)
         return
     end
 
-    local timeout_ms = DEFAULT_TIMEOUT_MS
-    if options ~= nil and options.timeout_ms ~= nil then
-        timeout_ms = options.timeout_ms
-    end
+    local timeout_ms = get_timeout_from_options(options)
 
     local topic
     if options ~= nil and options.topic ~= nil then
@@ -428,10 +432,7 @@ function Producer:list_groups(options)
         return
     end
 
-    local timeout_ms = DEFAULT_TIMEOUT_MS
-    if options ~= nil and options.timeout_ms ~= nil then
-        timeout_ms = options.timeout_ms
-    end
+    local timeout_ms = get_timeout_from_options(options)
 
     local group
     if options ~= nil and options.group ~= nil then

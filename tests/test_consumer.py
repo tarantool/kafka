@@ -3,12 +3,19 @@ import time
 import json
 import asyncio
 from contextlib import contextmanager
+import random
+import string
 
 import pytest
 from aiokafka import AIOKafkaProducer
 import tarantool
 
 KAFKA_HOST = os.getenv("KAFKA_HOST", "kafka:9092")
+
+
+def randomword(length):
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))
 
 
 def get_message_values(messages):
@@ -123,6 +130,30 @@ def test_consumer_should_consume_msgs():
                 assert msg['key'] == 'test1'
             elif msg['value'] == 'test3':
                 assert msg['headers'] == {'key1': 'value1', 'key2': 'value2', 'nullable': None}
+
+
+def test_consumer_seek_partitions():
+    key = "test_seek_unique_key"
+    value = "test_seek_unique_value"
+    message = {
+        "key": key,
+        "value": value,
+    }
+
+    topic = 'test_consumer_seek' + randomword(15)
+    write_into_kafka(topic, (message,))
+
+    server = get_server()
+
+    with create_consumer(server, KAFKA_HOST, {'group.id': 'consumer_seek'}):
+        server.call('consumer.subscribe', [[topic]])
+
+        response = server.call("consumer.test_seek_partitions")
+        assert len(response[0]) == 5
+
+        for item in response[0]:
+            assert item['key'] == key
+            assert item['value'] == value
 
 
 def test_consumer_should_consume_msgs_from_multiple_topics():

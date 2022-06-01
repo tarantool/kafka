@@ -25,6 +25,7 @@ luaopen_kafka_tntkafka(lua_State *L) {
             {"poll_errors", lua_consumer_poll_errors},
             {"poll_rebalances", lua_consumer_poll_rebalances},
             {"store_offset", lua_consumer_store_offset},
+            {"seek_partitions", lua_consumer_seek_partitions},
             {"dump_conf", lua_consumer_dump_conf},
             {"metadata", lua_consumer_metadata},
             {"list_groups", lua_consumer_list_groups},

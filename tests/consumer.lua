@@ -90,6 +90,21 @@ local function unsubscribe(topics)
     log.info("consumer unsubscribed")
 end
 
+local function msg_totable(msg)
+    return {
+        value = msg:value(),
+        key = msg:key(),
+        topic = msg:topic(),
+        partition = msg:partition(),
+        offset = msg:offset(),
+        headers = msg:headers(),
+    }
+end
+
+local function append_message(t, msg)
+    table.insert(t, msg_totable(msg))
+end
+
 local function consume(timeout)
     log.info("consume called")
 
@@ -105,14 +120,7 @@ local function consume(timeout)
             if msg ~= nil then
                 log.info("%s", msg)
                 log.info("got msg with topic='%s' partition='%d' offset='%d' key='%s' value='%s'", msg:topic(), msg:partition(), msg:offset(), msg:key(), msg:value())
-                table.insert(consumed, {
-                    value = msg:value(),
-                    key = msg:key(),
-                    topic = msg:topic(),
-                    partition = msg:partition(),
-                    offset = msg:offset(),
-                    headers = msg:headers(),
-                })
+                append_message(consumed, msg)
                 local err = consumer:store_offset(msg)
                 if err ~= nil then
                     log.error("got error '%s' while committing msg from topic '%s'", err, msg:topic())
@@ -178,6 +186,24 @@ local function close()
     log.info("consumer closed")
 end
 
+local function test_seek_partitions()
+    log.info('Test seek')
+    local messages = {}
+
+    local out = consumer:output()
+
+    for _ = 1, 5 do
+        local msg = out:get(3)
+        log.info('Get message: %s', json.encode(msg_totable(msg)))
+        append_message(messages, msg)
+        consumer:seek_partitions({
+            {msg:topic(), msg:partition(), msg:offset()}
+        }, 1000)
+    end
+
+    return messages
+end
+
 return {
     create = create,
     subscribe = subscribe,
@@ -193,4 +219,6 @@ return {
     list_groups = list_groups,
     pause = pause,
     resume = resume,
+
+    test_seek_partitions = test_seek_partitions,
 }
