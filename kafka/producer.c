@@ -17,7 +17,7 @@
  * Producer poll thread
  */
 
-void *
+static void *
 producer_poll_loop(void *arg) {
     producer_poller_t *poller = arg;
     int count = 0;
@@ -48,13 +48,13 @@ producer_poll_loop(void *arg) {
     pthread_exit(NULL);
 }
 
-producer_poller_t *
+static producer_poller_t *
 new_producer_poller(rd_kafka_t *rd_producer) {
     producer_poller_t *poller = NULL;
     poller = malloc(sizeof(producer_poller_t));
-    if (poller == NULL) {
+    if (poller == NULL)
         return NULL;
-    }
+
     poller->rd_producer = rd_producer;
     poller->should_stop = 0;
 
@@ -80,7 +80,7 @@ stop_poller(va_list args) {
     return 0;
 }
 
-void
+static void
 destroy_producer_poller(producer_poller_t *poller) {
     // stopping polling thread
     coio_call(stop_poller, poller);
@@ -99,6 +99,8 @@ producer_topics_t *
 new_producer_topics(int32_t capacity) {
     rd_kafka_topic_t **elements;
     elements = malloc(sizeof(rd_kafka_topic_t *) * capacity);
+    if (elements == NULL)
+        return NULL;
 
     producer_topics_t *topics;
     topics = malloc(sizeof(producer_topics_t));
@@ -158,7 +160,7 @@ lua_check_producer(struct lua_State *L, int index) {
 
 int
 lua_producer_tostring(struct lua_State *L) {
-    producer_t *producer = lua_check_producer(L, 1);
+    const producer_t *producer = lua_check_producer(L, 1);
     lua_pushfstring(L, "Kafka Producer: %p", producer);
     return 1;
 }
@@ -362,7 +364,7 @@ wait_producer_destroy(va_list args) {
     return 0;
 }
 
-void
+static void
 destroy_producer(struct lua_State *L, producer_t *producer) {
     if (producer->topics != NULL) {
         destroy_producer_topics(producer->topics);

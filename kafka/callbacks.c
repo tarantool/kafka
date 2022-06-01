@@ -162,7 +162,8 @@ msg_delivery_callback(rd_kafka_t *UNUSED(producer), const rd_kafka_message_t *ms
  * Handle rebalance callbacks from RDKafka
  */
 
-rebalance_msg_t *new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
+rebalance_msg_t *
+new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
     rebalance_msg_t *msg = malloc(sizeof(rebalance_msg_t));
     if (msg == NULL) {
         return NULL;
@@ -189,7 +190,8 @@ rebalance_msg_t *new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revok
     return msg;
 }
 
-rebalance_msg_t *new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
+rebalance_msg_t *
+new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
     rebalance_msg_t *msg = malloc(sizeof(rebalance_msg_t));
     if (msg == NULL) {
         return NULL;
@@ -216,7 +218,8 @@ rebalance_msg_t *new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assig
     return msg;
 }
 
-rebalance_msg_t *new_rebalance_error_msg(rd_kafka_resp_err_t err) {
+rebalance_msg_t *
+new_rebalance_error_msg(rd_kafka_resp_err_t err) {
     rebalance_msg_t *msg = malloc(sizeof(rebalance_msg_t));
     if (msg == NULL) {
         return NULL;
@@ -320,14 +323,16 @@ rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic
  * RDKafka callbacks from background threads
  */
 
-event_queues_t *new_event_queues() {
+event_queues_t *
+new_event_queues() {
     event_queues_t *event_queues = calloc(1, sizeof(event_queues_t));
     for (int i = 0; i < MAX_QUEUE; i++)
         event_queues->cb_refs[i] = LUA_REFNIL;
     return event_queues;
 }
 
-void destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
+void
+destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
     if (event_queues->consume_queue != NULL) {
         rd_kafka_message_t *msg = NULL;
         while (true) {

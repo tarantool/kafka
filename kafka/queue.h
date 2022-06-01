@@ -27,9 +27,11 @@ typedef struct {
  * @param queue
  * @return
  */
-void *queue_lockfree_pop(queue_t *queue);
+void *
+queue_lockfree_pop(queue_t *queue);
 
-void *queue_pop(queue_t *queue);
+void *
+queue_pop(queue_t *queue);
 
 /**
  * Push without locking mutex.
@@ -39,12 +41,15 @@ void *queue_pop(queue_t *queue);
  * @param value
  * @return
  */
-int queue_lockfree_push(queue_t *queue, void *value);
+int
+queue_lockfree_push(queue_t *queue, void *value);
 
-int queue_push(queue_t *queue, void *value);
+int
+queue_push(queue_t *queue, void *value);
 
-queue_t *new_queue();
+queue_t *
+new_queue();
 
 void destroy_queue(queue_t *queue);
 
-#endif //TNT_KAFKA_QUEUE_H
+#endif // TNT_KAFKA_QUEUE_H

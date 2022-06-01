@@ -23,14 +23,14 @@ lua_check_consumer_msg(struct lua_State *L, int index) {
 
 int
 lua_consumer_msg_topic(struct lua_State *L) {
-    msg_t *msg = lua_check_consumer_msg(L, 1);
+    const msg_t *msg = lua_check_consumer_msg(L, 1);
     lua_pushstring(L, rd_kafka_topic_name(msg->topic));
     return 1;
 }
 
 int
 lua_consumer_msg_partition(struct lua_State *L) {
-    msg_t *msg = lua_check_consumer_msg(L, 1);
+    const msg_t *msg = lua_check_consumer_msg(L, 1);
 
     lua_pushnumber(L, (double)msg->partition);
     return 1;
@@ -57,7 +57,7 @@ lua_consumer_msg_key(struct lua_State *L) {
 
 int
 lua_consumer_msg_value(struct lua_State *L) {
-    msg_t *msg = lua_check_consumer_msg(L, 1);
+    const msg_t *msg = lua_check_consumer_msg(L, 1);
 
     if (msg->value_len <= 0 || msg->value == NULL)
         lua_pushnil(L);
@@ -68,7 +68,7 @@ lua_consumer_msg_value(struct lua_State *L) {
 
 int
 lua_consumer_msg_headers(struct lua_State *L) {
-    msg_t *msg = lua_check_consumer_msg(L, 1);
+    const msg_t *msg = lua_check_consumer_msg(L, 1);
     if (msg->headers == NULL)
         return 0;
 
@@ -93,7 +93,7 @@ lua_consumer_msg_headers(struct lua_State *L) {
 
 int
 lua_consumer_msg_tostring(struct lua_State *L) {
-    msg_t *msg = lua_check_consumer_msg(L, 1);
+    const msg_t *msg = lua_check_consumer_msg(L, 1);
 
     size_t key_len = msg->key_len <= 0 ? sizeof(null_literal) : msg->key_len + 1;
     char key[key_len];
@@ -145,6 +145,9 @@ msg_t *
 new_consumer_msg(rd_kafka_message_t *rd_message) {
     size_t message_size = sizeof(msg_t) + rd_message->len + rd_message->key_len;
     msg_t *msg = calloc(message_size, 1);
+    if (msg == NULL)
+        return NULL;
+
     msg->topic = rd_message->rkt;
     msg->partition = rd_message->partition;
     msg->value = (char*)msg + sizeof(msg_t);

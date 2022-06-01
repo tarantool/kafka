@@ -18,7 +18,7 @@
  * Consumer poll thread
  */
 
-void *
+static void *
 consumer_poll_loop(void *arg) {
     consumer_poller_t *poller = arg;
     event_queues_t *event_queues = rd_kafka_opaque(poller->rd_consumer);
@@ -86,7 +86,7 @@ consumer_poll_loop(void *arg) {
     pthread_exit(NULL);
 }
 
-consumer_poller_t *
+static consumer_poller_t *
 new_consumer_poller(rd_kafka_t *rd_consumer) {
     consumer_poller_t *poller = NULL;
     poller = malloc(sizeof(consumer_poller_t));
@@ -118,13 +118,13 @@ stop_poller(va_list args) {
     return 0;
 }
 
-void
+static void
 stop_consumer_poller(consumer_poller_t *poller) {
     // stopping polling thread
     coio_call(stop_poller, poller);
 }
 
-void
+static void
 destroy_consumer_poller(consumer_poller_t *poller) {
     pthread_attr_destroy(&poller->attr);
     pthread_mutex_destroy(&poller->lock);
@@ -259,7 +259,7 @@ LUA_RDKAFKA_POLL_FUNC(consumer, poll_logs, LOG_QUEUE, destroy_log_msg, push_log_
 LUA_RDKAFKA_POLL_FUNC(consumer, poll_stats, STATS_QUEUE, free, push_stats_cb_args)
 LUA_RDKAFKA_POLL_FUNC(consumer, poll_errors, ERROR_QUEUE, destroy_error_msg, push_errors_cb_args)
 
-int
+static int
 lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, rebalance_msg_t *msg) {
     rd_kafka_topic_partition_t *tp = NULL;
     // creating main table
@@ -404,7 +404,7 @@ lua_consumer_store_offset(struct lua_State *L) {
     if (lua_gettop(L) != 2)
         luaL_error(L, "Usage: err = consumer:store_offset(msg)");
 
-    msg_t *msg = lua_check_consumer_msg(L, 2);
+    const msg_t *msg = lua_check_consumer_msg(L, 2);
     rd_kafka_resp_err_t err = rd_kafka_offset_store(msg->topic, msg->partition, msg->offset);
     if (err) {
         lua_pushstring(L, rd_kafka_err2str(err));
@@ -459,7 +459,7 @@ wait_consumer_destroy(va_list args) {
     return 0;
 }
 
-void
+static void
 consumer_destroy(struct lua_State *L, consumer_t *consumer) {
     if (consumer->rd_consumer != NULL) {
         stop_consumer_poller(consumer->poller);

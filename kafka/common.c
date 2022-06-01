@@ -66,9 +66,7 @@ lua_librdkafka_metadata(struct lua_State *L, rd_kafka_t *rk, rd_kafka_topic_t *o
 
     int all_topics = 0;
     if (only_rkt == NULL)
-    {
         all_topics = 1;
-    }
 
     const struct rd_kafka_metadata *metadatap;
     rd_kafka_resp_err_t err = coio_call(wait_librdkafka_metadata, rk, all_topics, only_rkt, &metadatap, timeout_ms);

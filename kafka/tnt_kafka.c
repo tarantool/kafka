@@ -85,13 +85,13 @@ luaopen_kafka_tntkafka(lua_State *L) {
     lua_setfield(L, -2, "__metatable");
     lua_pop(L, 1);
 
-	lua_newtable(L);
-	static const struct luaL_Reg meta [] = {
+    lua_newtable(L);
+    static const struct luaL_Reg meta [] = {
         {"create_consumer", lua_create_consumer},
         {"create_producer", lua_create_producer},
         {"librdkafka_version", lua_librdkafka_version},
         {NULL, NULL}
-	};
-	luaL_register(L, NULL, meta);
-	return 1;
+    };
+    luaL_register(L, NULL, meta);
+    return 1;
 }
