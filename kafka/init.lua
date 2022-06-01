@@ -229,7 +229,7 @@ function Consumer:list_groups(options)
     end
 
     local group
-    if options ~= nil and options.timeout_ms ~= nil then
+    if options ~= nil and options.group ~= nil then
         group = options.group
     end
 
@@ -421,7 +421,7 @@ function Producer:list_groups(options)
     end
 
     local group
-    if options ~= nil and options.timeout_ms ~= nil then
+    if options ~= nil and options.group ~= nil then
         group = options.group
     end
 
