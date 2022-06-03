@@ -50,8 +50,7 @@ producer_poll_loop(void *arg) {
 
 static producer_poller_t *
 new_producer_poller(rd_kafka_t *rd_producer) {
-    producer_poller_t *poller = NULL;
-    poller = malloc(sizeof(producer_poller_t));
+    producer_poller_t *poller = malloc(sizeof(producer_poller_t));
     if (poller == NULL)
         return NULL;
 
@@ -61,8 +60,13 @@ new_producer_poller(rd_kafka_t *rd_producer) {
     pthread_mutex_init(&poller->lock, NULL);
     pthread_attr_init(&poller->attr);
     pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE);
-    pthread_create(&poller->thread, &poller->attr, producer_poll_loop, (void *)poller);
+    int rc = pthread_create(&poller->thread, &poller->attr, producer_poll_loop, (void *)poller);
+    if (rc < 0) {
+        free(poller);
+        return NULL;
+    }
 
+    set_thread_name(poller->thread, "kafka_producer");
     return poller;
 }
 

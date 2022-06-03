@@ -88,18 +88,22 @@ consumer_poll_loop(void *arg) {
 
 static consumer_poller_t *
 new_consumer_poller(rd_kafka_t *rd_consumer) {
-    consumer_poller_t *poller = NULL;
-    poller = malloc(sizeof(consumer_poller_t));
-    if (poller == NULL) {
+    consumer_poller_t *poller = malloc(sizeof(consumer_poller_t));
+    if (poller == NULL)
         return NULL;
-    }
+
     poller->rd_consumer = rd_consumer;
     poller->should_stop = 0;
 
     pthread_mutex_init(&poller->lock, NULL);
     pthread_attr_init(&poller->attr);
     pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE);
-    pthread_create(&poller->thread, &poller->attr, consumer_poll_loop, (void *)poller);
+    int rc = pthread_create(&poller->thread, &poller->attr, consumer_poll_loop, (void *)poller);
+    if (rc != 0) {
+        free(poller);
+        return NULL;
+    }
+    set_thread_name(poller->thread, "kafka_consumer");
 
     return poller;
 }

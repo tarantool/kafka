@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <lua.h>
 #include <common.h>
 #include <assert.h>
@@ -293,3 +295,16 @@ lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *grou
     rd_kafka_group_list_destroy(grplistp);
     return 1;
 }
+
+#ifdef __linux__
+void set_thread_name(pthread_t thread, const char *name) {
+    int rc = pthread_setname_np(thread, name);
+    (void)rc;
+    assert(rc == 0);
+}
+#else
+void set_thread_name(pthread_t thread, const char *name) {
+    (void)thread;
+    (void)name;
+}
+#endif

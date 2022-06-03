@@ -11,11 +11,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_C_FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${MY_C_FLAGS} -ggdb3")
 
 find_package(Tarantool REQUIRED)
-# Oracle Connector requires fiber_cond API added in 1.7.4-291
-string(REPLACE "-" "." tntver ${TARANTOOL_VERSION})
-if(${tntver} VERSION_LESS 1.7.4.291)
-    message(FATAL_ERROR "Tarantool >= 1.7.4-291 is required")
-endif()
 
 set(STATIC_BUILD "OFF", CACHE BOOL "Link dependencies statically?")
 set(WITH_OPENSSL_1_1 "OFF" CACHE BOOL "Require openssl version >= 1.1?")

@@ -14,6 +14,7 @@
 #include <lualib.h>
 #include <lauxlib.h>
 #include <librdkafka/rdkafka.h>
+#include <pthread.h>
 
 #include <tarantool/module.h>
 
@@ -35,5 +36,7 @@ lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *grou
  * Push native lua error with code -3
  */
 int lua_push_error(struct lua_State *L);
+
+void set_thread_name(pthread_t thread, const char *name);
 
 #endif //TNT_KAFKA_COMMON_H

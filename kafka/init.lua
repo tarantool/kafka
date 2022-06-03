@@ -28,29 +28,34 @@ function Consumer.create(config)
     new._poll_msg_fiber = fiber.create(function()
         new:_poll_msg()
     end)
+    new._poll_msg_fiber:name('kafka_msg_poller')
 
     if config.log_callback ~= nil then
         new._poll_logs_fiber = fiber.create(function()
             new:_poll_logs()
         end)
+        new._poll_logs_fiber:name('kafka_logs_poller')
     end
 
     if config.stats_callback ~= nil then
         new._poll_stats_fiber = fiber.create(function()
             new:_poll_stats()
         end)
+        new._poll_stats_fiber:name('kafka_stats_poller')
     end
 
     if config.error_callback ~= nil then
         new._poll_errors_fiber = fiber.create(function()
             new:_poll_errors()
         end)
+        new._poll_errors_fiber:name('kafka_error_poller')
     end
 
     if config.rebalance_callback ~= nil then
         new._poll_rebalances_fiber = fiber.create(function()
             new:_poll_rebalances()
         end)
+        new._poll_rebalances_fiber:name('kafka_rebalances_poller')
     end
 
     return new, nil
