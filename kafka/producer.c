@@ -19,6 +19,8 @@
 
 static void *
 producer_poll_loop(void *arg) {
+    set_thread_name("kafka_producer");
+
     producer_poller_t *poller = arg;
     int count = 0;
     int should_stop = 0;
@@ -66,7 +68,6 @@ new_producer_poller(rd_kafka_t *rd_producer) {
         return NULL;
     }
 
-    set_thread_name(poller->thread, "kafka_producer");
     return poller;
 }
 

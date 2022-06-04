@@ -20,6 +20,8 @@
 
 static void *
 consumer_poll_loop(void *arg) {
+    set_thread_name("kafka_consumer");
+
     consumer_poller_t *poller = arg;
     event_queues_t *event_queues = rd_kafka_opaque(poller->rd_consumer);
     rd_kafka_message_t *rd_msg = NULL;
@@ -103,7 +105,6 @@ new_consumer_poller(rd_kafka_t *rd_consumer) {
         free(poller);
         return NULL;
     }
-    set_thread_name(poller->thread, "kafka_consumer");
 
     return poller;
 }

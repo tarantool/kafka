@@ -37,6 +37,6 @@ lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *grou
  */
 int lua_push_error(struct lua_State *L);
 
-void set_thread_name(pthread_t thread, const char *name);
+void set_thread_name(const char *name);
 
 #endif //TNT_KAFKA_COMMON_H

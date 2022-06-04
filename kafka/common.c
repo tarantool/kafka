@@ -296,15 +296,19 @@ lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *grou
     return 1;
 }
 
+void set_thread_name(const char *name)
 #ifdef __linux__
-void set_thread_name(pthread_t thread, const char *name) {
-    int rc = pthread_setname_np(thread, name);
+{
+    int rc = pthread_setname_np(pthread_self(), name);
     (void)rc;
     assert(rc == 0);
 }
+#elif __APPLE__
+{
+    pthread_setname_np(name);
+}
 #else
-void set_thread_name(pthread_t thread, const char *name) {
-    (void)thread;
-    (void)name;
+{
+	(void)name;
 }
 #endif
