@@ -203,6 +203,14 @@ function Consumer:store_offset(message)
     return self._consumer:store_offset(message)
 end
 
+function Consumer:pause()
+    return self._consumer:pause()
+end
+
+function Consumer:resume()
+    return self._consumer:resume()
+end
+
 function Consumer:dump_conf()
     if self._consumer == nil then
         return

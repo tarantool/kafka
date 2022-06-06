@@ -28,6 +28,8 @@ luaopen_kafka_tntkafka(lua_State *L) {
             {"dump_conf", lua_consumer_dump_conf},
             {"metadata", lua_consumer_metadata},
             {"list_groups", lua_consumer_list_groups},
+            {"pause", lua_consumer_pause},
+            {"resume", lua_consumer_resume},
             {"close", lua_consumer_close},
             {"destroy", lua_consumer_destroy},
             {"__tostring", lua_consumer_tostring},

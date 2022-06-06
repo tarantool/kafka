@@ -395,6 +395,53 @@ def test_consumer_should_continue_consuming_from_last_committed_offset():
         }
 
 
+def test_consumer_pause_resume():
+    message_before_pause = {
+        "key": "message_before_pause",
+        "value": "message_before_pause",
+    }
+
+    message_on_pause = {
+        "key": "message_on_pause",
+        "value": "message_on_pause",
+    }
+
+    message_after_pause = {
+        "key": "message_after_pause",
+        "value": "message_after_pause",
+    }
+
+    server = get_server()
+
+    with create_consumer(server, KAFKA_HOST, {"group.id": "should_consume_msgs"}):
+        server.call("consumer.subscribe", [["test_resume_pause"]])
+
+        write_into_kafka("test_resume_pause", (message_before_pause,))
+
+        response = server.call("consumer.consume", [10])[0]
+
+        assert set(get_message_values(response)) == {
+            "message_before_pause",
+        }
+
+        response = server.call("consumer.pause")
+        assert len(response) == 0
+
+        write_into_kafka("test_resume_pause", (message_on_pause,))
+        response = server.call("consumer.consume", [2])[0]
+        assert len(response) == 0
+
+        response = server.call("consumer.resume")
+        assert len(response) == 0
+        write_into_kafka("test_resume_pause", (message_after_pause,))
+
+        response = server.call("consumer.consume", [2])[0]
+        assert set(get_message_values(response)) == {
+            "message_on_pause",
+            "message_after_pause",
+        }
+
+
 @pytest.mark.timeout(5)
 def test_consumer_should_be_closed():
     server = get_server()

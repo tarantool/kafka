@@ -708,3 +708,29 @@ lua_consumer_list_groups(struct lua_State *L) {
     }
     return 0;
 }
+
+static int
+lua_consumer_call_pause_resume(struct lua_State *L, rd_kafka_resp_err_t (*fun)(rd_kafka_t *rk)) {
+    consumer_t **consumer_p = luaL_checkudata(L, 1, consumer_label);
+    if (consumer_p == NULL || *consumer_p == NULL)
+        return 0;
+
+    if ((*consumer_p)->rd_consumer != NULL) {
+        rd_kafka_resp_err_t err = fun((*consumer_p)->rd_consumer);
+        if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+            lua_pushstring(L, rd_kafka_err2str(err));
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int
+lua_consumer_pause(struct lua_State *L) {
+    return lua_consumer_call_pause_resume(L, kafka_pause);
+}
+
+int
+lua_consumer_resume(struct lua_State *L) {
+    return lua_consumer_call_pause_resume(L, kafka_resume);
+}

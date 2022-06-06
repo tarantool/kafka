@@ -296,7 +296,8 @@ lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *grou
     return 1;
 }
 
-void set_thread_name(const char *name)
+void
+set_thread_name(const char *name)
 #ifdef __linux__
 {
     int rc = pthread_setname_np(pthread_self(), name);
@@ -309,6 +310,30 @@ void set_thread_name(const char *name)
 }
 #else
 {
-	(void)name;
+    (void)name;
 }
 #endif
+
+static rd_kafka_resp_err_t
+kafka_pause_resume(rd_kafka_t *rk,
+                   rd_kafka_resp_err_t (*fun)(rd_kafka_t *rk, rd_kafka_topic_partition_list_t *partitions)) {
+    rd_kafka_topic_partition_list_t *partitions = NULL;
+    rd_kafka_resp_err_t err = rd_kafka_assignment(rk, &partitions);
+
+    if (err != RD_KAFKA_RESP_ERR_NO_ERROR)
+        return err;
+
+    err = fun(rk, partitions);
+    rd_kafka_topic_partition_list_destroy(partitions);
+    return err;
+}
+
+rd_kafka_resp_err_t
+kafka_pause(rd_kafka_t *rk) {
+    return kafka_pause_resume(rk, rd_kafka_pause_partitions);
+}
+
+rd_kafka_resp_err_t
+kafka_resume(rd_kafka_t *rk) {
+    return kafka_pause_resume(rk, rd_kafka_resume_partitions);
+}

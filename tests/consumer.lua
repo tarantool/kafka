@@ -160,6 +160,14 @@ local function list_groups(timeout_ms)
     return consumer:list_groups({timeout_ms = timeout_ms})
 end
 
+local function pause()
+    return consumer:pause()
+end
+
+local function resume()
+    return consumer:resume()
+end
+
 local function close()
     log.info("closing consumer")
     local _, err = consumer:close()
@@ -183,4 +191,6 @@ return {
     dump_conf = dump_conf,
     metadata = metadata,
     list_groups = list_groups,
+    pause = pause,
+    resume = resume,
 }
