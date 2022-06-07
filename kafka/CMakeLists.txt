@@ -10,6 +10,7 @@ endif(APPLE)
 
 find_package(Threads REQUIRED)
 target_link_libraries(tntkafka ${CMAKE_THREAD_LIBS_INIT})
+set_target_properties(tntkafka PROPERTIES C_VISIBILITY_PRESET hidden)
 
 target_link_libraries(tntkafka ${RDKAFKA_LIBRARY})
 set_target_properties(tntkafka PROPERTIES PREFIX "" OUTPUT_NAME "tntkafka")

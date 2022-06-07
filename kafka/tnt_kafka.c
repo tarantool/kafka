@@ -14,7 +14,7 @@
  * Entry point
  */
 
-LUA_API int
+LUA_API int __attribute__ ((visibility("default")))
 luaopen_kafka_tntkafka(lua_State *L) {
     static const struct luaL_Reg consumer_methods [] = {
             {"subscribe", lua_consumer_subscribe},
