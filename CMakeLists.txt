@@ -12,7 +12,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${MY_C_FLAGS} -ggdb3")
 
 find_package(Tarantool REQUIRED)
 
-set(STATIC_BUILD "OFF", CACHE BOOL "Link dependencies statically?")
+set(STATIC_BUILD "OFF" CACHE BOOL "Link dependencies statically?")
 set(WITH_OPENSSL_1_1 "OFF" CACHE BOOL "Require openssl version >= 1.1?")
 
 if (WITH_OPENSSL_1_1)
@@ -43,8 +43,7 @@ if(STATIC_BUILD)
 
     set(RDKAFKA_LIBRARY ${RDKAFKA_LIBRARY} librdkafka_static)
 else()
-    set(RDKAFKA_FIND_REQUIRED ON)
-    find_package(RdKafka)
+    find_package(RDKAFKA REQUIRED)
     # Link RdKafka transitive dependencies manually
     set(RDKAFKA_LIBRARY ${RDKAFKA_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 endif()
