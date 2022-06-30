@@ -48,7 +48,7 @@ def create_consumer(server, *args):
 
 
 def write_into_kafka(topic, messages):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop_policy().new_event_loop()
 
     async def send():
         producer = AIOKafkaProducer(bootstrap_servers='localhost:9092')
@@ -74,6 +74,7 @@ def write_into_kafka(topic, messages):
             await producer.stop()
 
     loop.run_until_complete(send())
+    loop.close()
 
 
 def test_consumer_should_consume_msgs():

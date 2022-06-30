@@ -22,10 +22,24 @@ else()
 endif()
 message("Found OPENSSL version: ${OPENSSL_VERSION}")
 
+option(ENABLE_ASAN OFF)
+if (ENABLE_ASAN)
+    set(LIBRDKAFKA_C_FLAGS "-fsanitize=address")
+    set(LIBRDKAFKA_CXX_FLAGS "-fsanitize=address")
+    set(LIBRDKAFKA_FLAGS "--enable-devel")
+endif()
+
 if(STATIC_BUILD)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
-        COMMAND ./configure --enable-ssl --disable-zstd --prefix=${CMAKE_BINARY_DIR}/librdkafka
+        COMMAND ./configure --enable-ssl
+                            --disable-zstd
+                            --prefix=${CMAKE_BINARY_DIR}/librdkafka
+                            ${LIBRDKAFKA_FLAGS}
+                            --cc=${CMAKE_C_COMPILER}
+                            --cxx=${CMAKE_CXX_COMPILER}
+                            --CFLAGS=${LIBRDKAFKA_C_FLAGS}
+                            --CXXFLAGS=${LIBRDKAFKA_CXX_FLAGS}
         COMMAND $(MAKE) -j
         COMMAND $(MAKE) install
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka

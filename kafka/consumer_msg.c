@@ -101,10 +101,8 @@ lua_consumer_msg_tostring(struct lua_State *L) {
     if (msg->key_len <= 0 || msg->key == NULL) {
         memcpy(key, null_literal, sizeof(null_literal));
     } else {
-        strncpy(key, msg->key, msg->key_len + 1);
-        if (key[msg->key_len] != '\0') {
-            key[msg->key_len] = '\0';
-        }
+        strncpy(key, msg->key, msg->key_len);
+        key[msg->key_len] = '\0';
     }
 
     size_t value_len = msg->value_len <= 0 ? sizeof(null_literal) : msg->value_len + 1;
@@ -113,10 +111,8 @@ lua_consumer_msg_tostring(struct lua_State *L) {
     if (msg->value_len <= 0 || msg->value == NULL) {
         memcpy(value, null_literal, sizeof(null_literal));
     } else {
-        strncpy(value, msg->value, msg->value_len + 1);
-        if (value[msg->value_len] != '\0') {
-            value[msg->value_len] = '\0';
-        }
+        strncpy(value, msg->value, msg->value_len);
+        value[msg->value_len] = '\0';
     }
 
     lua_pushfstring(L,

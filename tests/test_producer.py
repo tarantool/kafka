@@ -33,7 +33,7 @@ def test_producer_should_produce_msgs():
     ]
     server.call("producer.produce", [messages])
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop_policy().new_event_loop()
 
     async def test():
         kafka_output = []
@@ -73,6 +73,7 @@ def test_producer_should_produce_msgs():
         assert kafka_output == messages
 
     loop.run_until_complete(test())
+    loop.close()
 
     server.call("producer.close", [])
 
