@@ -29,6 +29,11 @@ if (ENABLE_ASAN)
     set(LIBRDKAFKA_FLAGS "--enable-devel")
 endif()
 
+if (APPLE)
+    set(LIBRDKAFKA_CXX_FLAGS "${LIBRDKAFKA_CXX_FLAGS} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
+    set(LIBRDKAFKA_C_FLAGS "${LIBRDKAFKA_C_FLAGS} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
+endif()
+
 if(STATIC_BUILD)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
