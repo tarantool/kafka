@@ -10,6 +10,7 @@
 #include <librdkafka/rdkafka.h>
 
 #include <common.h>
+#include <consumer_msg.h>
 #include <queue.h>
 #include <callbacks.h>
 
@@ -334,12 +335,12 @@ new_event_queues() {
 void
 destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
     if (event_queues->consume_queue != NULL) {
-        rd_kafka_message_t *msg = NULL;
+        msg_t *msg = NULL;
         while (true) {
             msg = queue_pop(event_queues->consume_queue);
             if (msg == NULL)
                 break;
-            rd_kafka_message_destroy(msg);
+            destroy_consumer_msg(msg);
         }
         destroy_queue(event_queues->consume_queue);
     }
