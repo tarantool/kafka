@@ -1,0 +1,12 @@
+diff --git a/src/rdkafka_topic.c b/src/rdkafka_topic.c
+index 7f79a2ff..eddd2b5a 100644
+--- a/src/rdkafka_topic.c
++++ b/src/rdkafka_topic.c
+@@ -854,6 +854,7 @@ static int rd_kafka_topic_partition_cnt_update(rd_kafka_topic_t *rkt,
+                                 /* Remove from desp list since the
+                                  * partition is now known. */
+                                 rd_kafka_toppar_desired_unlink(rktp);
++                                rktp = NULL;
+                         } else {
+                                 rktp = rd_kafka_toppar_new(rkt, i);
+ 

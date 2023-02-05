@@ -1,0 +1,15 @@
+diff --git a/src/rdkafka_subscription.c b/src/rdkafka_subscription.c
+index 08058935..2974d0dc 100644
+--- a/src/rdkafka_subscription.c
++++ b/src/rdkafka_subscription.c
+@@ -196,8 +196,8 @@ const char *rd_kafka_rebalance_protocol(rd_kafka_t *rk) {
+         }
+ 
+         result = rko->rko_u.rebalance_protocol.str;
+-
+-        rd_kafka_op_destroy(rko);
++        rd_kafka_op_t *rko_ = rko;
++        rd_kafka_op_destroy(rko_);
+ 
+         return result;
+ }
