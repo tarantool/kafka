@@ -35,7 +35,11 @@ if (APPLE)
     set(LIBRDKAFKA_C_FLAGS "${LIBRDKAFKA_C_FLAGS} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
 endif()
 
-set(PATCHES "security36.patch" "security71.patch" "security72.patch")
+set(PATCHES
+    "security36.patch"
+    "security71.patch"
+    "security72.patch"
+)
 
 foreach(PATCH_FILENAME ${PATCHES})
     execute_process(
