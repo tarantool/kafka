@@ -35,32 +35,17 @@ if (APPLE)
     set(LIBRDKAFKA_C_FLAGS "${LIBRDKAFKA_C_FLAGS} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
 endif()
 
-set(PATCH_FILENAME "security36.patch")
-execute_process(
-    COMMAND ${GIT} apply ${CMAKE_SOURCE_DIR}/patch/${PATCH_FILENAME}
-    OUTPUT_VARIABLE PATCH_LOG
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
-)
-message(STATUS "git apply patch ${PATCH_FILENAME} ${PATCH_LOG}")
+set(PATCHES "security36.patch" "security71.patch" "security72.patch")
 
-set(PATCH_FILENAME "security71.patch")
-execute_process(
-    COMMAND ${GIT} apply ${CMAKE_SOURCE_DIR}/patch/${PATCH_FILENAME}
-    OUTPUT_VARIABLE PATCH_LOG
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
-)
-message(STATUS "git apply patch ${PATCH_FILENAME} ${PATCH_LOG}")
-
-set(PATCH_FILENAME "security72.patch")
-execute_process(
-    COMMAND ${GIT} apply ${CMAKE_SOURCE_DIR}/patch/${PATCH_FILENAME}
-    OUTPUT_VARIABLE PATCH_LOG
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
-)
-message(STATUS "git apply patch ${PATCH_FILENAME} ${PATCH_LOG}")
+foreach(PATCH_FILENAME ${PATCHES})
+    execute_process(
+        COMMAND ${GIT} apply ${CMAKE_SOURCE_DIR}/patches/${PATCH_FILENAME}
+        OUTPUT_VARIABLE PATCH_LOG
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
+    )
+    message(STATUS "git apply patch ${PATCH_FILENAME} ${PATCH_LOG}")
+endforeach()
 
 if(STATIC_BUILD)
     add_custom_command(
