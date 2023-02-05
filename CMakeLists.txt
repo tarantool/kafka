@@ -44,6 +44,24 @@ execute_process(
 )
 message(STATUS "git apply patch ${PATCH_FILENAME} ${PATCH_LOG}")
 
+set(PATCH_FILENAME "security71.patch")
+execute_process(
+    COMMAND ${GIT} apply ${CMAKE_SOURCE_DIR}/patch/${PATCH_FILENAME}
+    OUTPUT_VARIABLE PATCH_LOG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
+)
+message(STATUS "git apply patch ${PATCH_FILENAME} ${PATCH_LOG}")
+
+set(PATCH_FILENAME "security72.patch")
+execute_process(
+    COMMAND ${GIT} apply ${CMAKE_SOURCE_DIR}/patch/${PATCH_FILENAME}
+    OUTPUT_VARIABLE PATCH_LOG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
+)
+message(STATUS "git apply patch ${PATCH_FILENAME} ${PATCH_LOG}")
+
 if(STATIC_BUILD)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
