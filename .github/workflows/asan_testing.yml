@@ -25,6 +25,9 @@ jobs:
         with:
           submodules: true
 
+      - name: 'Stop something server'
+        run: sudo kill -9 $(sudo lsof -t -i tcp:3301) || true
+
       - name: Start Kafka
         uses: 280780363/kafka-action@v1.0
         with:
