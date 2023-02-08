@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         tarantool:
-          - '2.10'
+          - '2.8'
 
     runs-on: ubuntu-latest
     steps:
