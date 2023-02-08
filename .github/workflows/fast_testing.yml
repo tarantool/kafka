@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         tarantool:
-          - '2.8'
+          - '2.10'
 
     runs-on: ubuntu-latest
     steps:
@@ -51,6 +51,9 @@ jobs:
         run: |
           export MAKEFLAGS=-j8
           tarantoolctl rocks STATIC_BUILD=ON make
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Run tarantool application
         run: TT_LOG=tarantool.log tarantool tests/app.lua > output.log 2>&1 &
