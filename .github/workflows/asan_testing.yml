@@ -1,4 +1,4 @@
-name: fast_testing
+name: asan_testing
 
 on:
   push:
@@ -46,7 +46,7 @@ jobs:
           export CXX=clang++
           git clone https://github.com/tarantool/tarantool
           cd tarantool
-          git checkout e48a8f4b0a4e0a8ba352611cfa48b9f74e7df609
+          git checkout 2.10
           export LSAN_OPTIONS=suppressions=${PWD}/asan/lsan.supp
           cmake . -DENABLE_ASAN=ON -DENABLE_DIST=ON
           make -j16
