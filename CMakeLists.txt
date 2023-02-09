@@ -39,6 +39,8 @@ if(STATIC_BUILD)
         OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
         COMMAND ./configure --enable-ssl
                             --disable-zstd
+                            --disable-lz4
+                            --disable-lz4-ext
                             --prefix=${CMAKE_BINARY_DIR}/librdkafka
                             ${LIBRDKAFKA_FLAGS}
                             --cc=${CMAKE_C_COMPILER}
