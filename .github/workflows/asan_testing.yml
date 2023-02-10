@@ -51,9 +51,6 @@ jobs:
           cd ..
           tarantoolctl rocks STATIC_BUILD=ON ENABLE_ASAN=ON make
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: Run tarantool application
         run: |
           export TT_LOG=tarantool.log
