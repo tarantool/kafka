@@ -35,32 +35,33 @@ if (APPLE)
 endif()
 
 if(STATIC_BUILD)
-    add_custom_command(
-        OUTPUT ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
-        COMMAND ./configure --enable-ssl
-                            --disable-zstd
-                            --disable-lz4
-                            --disable-lz4-ext
-                            --prefix=${CMAKE_BINARY_DIR}/librdkafka
-                            ${LIBRDKAFKA_FLAGS}
-                            --cc=${CMAKE_C_COMPILER}
-                            --cxx=${CMAKE_CXX_COMPILER}
-                            --CFLAGS=${LIBRDKAFKA_C_FLAGS}
-                            --CXXFLAGS=${LIBRDKAFKA_CXX_FLAGS}
-        COMMAND $(MAKE) -j
-        COMMAND $(MAKE) install
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/librdkafka
-        COMMENT "Building librdkafka"
-        VERBATIM
-    )
-    add_custom_target(librdkafka.a ALL
-        DEPENDS ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a
+    include(ExternalProject)
+    ExternalProject_Add(librdkafka
+        SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/librdkafka
+        INSTALL_DIR ${CMAKE_BINARY_DIR}/librdkafka
+        BUILD_IN_SOURCE 1
+        CONFIGURE_COMMAND <SOURCE_DIR>/configure
+            --cc=${CMAKE_C_COMPILER}
+            --cxx=${CMAKE_CXX_COMPILER}
+            --CFLAGS=${LIBRDKAFKA_C_FLAGS}
+            --CPPFLAGS=${LIBRDKAFKA_CXX_FLAGS}
+            --prefix=<INSTALL_DIR>
+            ${LIBRDKAFKA_FLAGS}
+
+            --enable-ssl
+            --disable-zstd
+            --disable-lz4
+            --disable-lz4-ext
+            --enable-static
+        BUILD_COMMAND make -C src -j
+        INSTALL_COMMAND make -C src install
     )
 
     add_library(librdkafka_static INTERFACE)
-    target_include_directories(librdkafka_static INTERFACE ${CMAKE_BINARY_DIR}/librdkafka/include)
-    target_link_libraries(librdkafka_static INTERFACE ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka.a)
-    add_dependencies(librdkafka_static librdkafka.a)
+    add_dependencies(librdkafka_static librdkafka)
+    ExternalProject_Get_Property(librdkafka INSTALL_DIR)
+    target_include_directories(librdkafka_static INTERFACE ${INSTALL_DIR}/include)
+    target_link_libraries(librdkafka_static INTERFACE ${INSTALL_DIR}/lib/librdkafka.a)
 
     set(RDKAFKA_LIBRARY ${RDKAFKA_LIBRARY} librdkafka_static)
 else()
