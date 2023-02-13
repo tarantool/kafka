@@ -1,0 +1,13 @@
+diff --git a/src/lz4.c b/src/lz4.c
+index 335e2a03..6299373a 100644
+--- a/src/lz4.c
++++ b/src/lz4.c
+@@ -1009,7 +1009,7 @@ LZ4_FORCE_INLINE int LZ4_compress_generic_validated(
+                 } /* too far */
+                 assert((current - matchIndex) <= LZ4_DISTANCE_MAX);  /* match now expected within distance */
+ 
+-                if (LZ4_read32(match) == LZ4_read32(ip)) {
++                if (match != NULL && LZ4_read32(match) == LZ4_read32(ip)) {
+                     if (maybe_extMem) offset = current - matchIndex;
+                     break;   /* match found */
+                 }
