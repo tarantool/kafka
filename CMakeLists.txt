@@ -36,6 +36,7 @@ endif()
 
 if(STATIC_BUILD)
     include(ExternalProject)
+    set(PATCHES_DIR "${CMAKE_SOURCE_DIR}/patches")
     ExternalProject_Add(librdkafka
         SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/librdkafka
         INSTALL_DIR ${CMAKE_BINARY_DIR}/librdkafka
@@ -55,6 +56,7 @@ if(STATIC_BUILD)
             --enable-static
         BUILD_COMMAND make -C src -j
         INSTALL_COMMAND make -C src install
+        PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-47.patch"
     )
 
     add_library(librdkafka_static INTERFACE)
