@@ -1,0 +1,22 @@
+diff --git a/src/rdkafka_conf.c b/src/rdkafka_conf.c
+index a8a1204b..65fbcbfd 100644
+--- a/src/rdkafka_conf.c
++++ b/src/rdkafka_conf.c
+@@ -3463,7 +3463,7 @@ rd_kafka_resp_err_t rd_kafka_confval_set_type(rd_kafka_confval_t *confval,
+                         return RD_KAFKA_RESP_ERR__INVALID_ARG;
+                 }
+ 
+-                vlen = strlen(v);
++                vlen = v ? strlen(v) : 0;
+                 if ((confval->u.STR.minlen || confval->u.STR.maxlen) &&
+                     (vlen < confval->u.STR.minlen ||
+                      vlen > confval->u.STR.maxlen)) {
+@@ -3479,7 +3479,7 @@ rd_kafka_resp_err_t rd_kafka_confval_set_type(rd_kafka_confval_t *confval,
+                 if (confval->u.STR.v)
+                         rd_free(confval->u.STR.v);
+ 
+-                confval->u.STR.v = rd_strdup(v);
++                confval->u.STR.v = v ? rd_strdup(v) : rd_strdup("");
+         } break;
+ 
+         case RD_KAFKA_CONFVAL_PTR:
