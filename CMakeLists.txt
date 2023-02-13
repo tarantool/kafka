@@ -58,6 +58,7 @@ if(STATIC_BUILD)
         INSTALL_COMMAND make -C src install
         PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-47.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-52.patch"
+        COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-55.patch"
     )
 
     add_library(librdkafka_static INTERFACE)

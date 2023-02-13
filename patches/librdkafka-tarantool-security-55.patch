@@ -1,0 +1,13 @@
+diff --git a/src/rdkafka_partition.c b/src/rdkafka_partition.c
+index 2d889e09..4e26a40c 100644
+--- a/src/rdkafka_partition.c
++++ b/src/rdkafka_partition.c
+@@ -1162,7 +1162,7 @@ void rd_kafka_toppar_broker_delegate(rd_kafka_toppar_t *rktp,
+         if (rktp->rktp_broker || rkb)
+                 rd_kafka_toppar_broker_migrate(rktp, rktp->rktp_broker, rkb);
+ 
+-        if (internal_fallback)
++        if (internal_fallback && rkb)
+                 rd_kafka_broker_destroy(rkb);
+ }
+ 
