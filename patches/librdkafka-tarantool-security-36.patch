@@ -1,0 +1,12 @@
+diff --git a/src/rdhttp.c b/src/rdhttp.c
+index dca6c6f8..5a290c5b 100644
+--- a/src/rdhttp.c
++++ b/src/rdhttp.c
+@@ -345,6 +345,7 @@ rd_http_error_t *rd_http_post_expect_json(rd_kafka_t *rk,
+ 
+                 /* Retry */
+                 rd_http_error_destroy(herr);
++                herr = 0;
+                 rd_usleep(retry_ms * 1000 * (i + 1), &rk->rk_terminate);
+         }
+ 
