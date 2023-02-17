@@ -1,0 +1,57 @@
+diff --git a/src/rdkafka_partition.c b/src/rdkafka_partition.c
+index 2d889e09..cf367d3a 100644
+--- a/src/rdkafka_partition.c
++++ b/src/rdkafka_partition.c
+@@ -3612,12 +3612,14 @@ reply:
+ 
+         if (rd_kafka_timer_stop(&rk->rk_timers, &rko->rko_u.leaders.query_tmr,
+                                 RD_DO_LOCK))
+-                rd_kafka_enq_once_del_source(rko->rko_u.leaders.eonce,
+-                                             "query timer");
++                if (rd_kafka_enq_once_del_source(rko->rko_u.leaders.eonce,
++                                             "query timer"))
++                        rko->rko_u.leaders.eonce = NULL;
+         if (rd_kafka_timer_stop(&rk->rk_timers, &rko->rko_u.leaders.timeout_tmr,
+                                 RD_DO_LOCK))
+-                rd_kafka_enq_once_del_source(rko->rko_u.leaders.eonce,
+-                                             "timeout timer");
++                if (rd_kafka_enq_once_del_source(rko->rko_u.leaders.eonce,
++                                             "timeout timer"))
++                        rko->rko_u.leaders.eonce = NULL;
+ 
+         if (rko->rko_u.leaders.eonce) {
+                 rd_kafka_enq_once_disable(rko->rko_u.leaders.eonce);
+diff --git a/src/rdkafka_queue.h b/src/rdkafka_queue.h
+index 0d50f587..04dddbf9 100644
+--- a/src/rdkafka_queue.h
++++ b/src/rdkafka_queue.h
+@@ -983,7 +983,8 @@ rd_kafka_enq_once_add_source(rd_kafka_enq_once_t *eonce, const char *srcdesc) {
+ 
+ 
+ /**
+- * @brief Decrement refcount for source (non-owner), such as a timer.
++ * @brief Decrement refcount for source (non-owner), such as a timer
++ *        and return 1 if eonce was destroyed.
+  *
+  * @param srcdesc a human-readable descriptive string of the source.
+  *                May be used for future debugging.
+@@ -993,7 +994,7 @@ rd_kafka_enq_once_add_source(rd_kafka_enq_once_t *eonce, const char *srcdesc) {
+  *         This API is used to undo an add_source() from the
+  *         same code.
+  */
+-static RD_INLINE RD_UNUSED void
++static RD_INLINE RD_UNUSED int
+ rd_kafka_enq_once_del_source(rd_kafka_enq_once_t *eonce, const char *srcdesc) {
+         int do_destroy;
+ 
+@@ -1006,7 +1007,10 @@ rd_kafka_enq_once_del_source(rd_kafka_enq_once_t *eonce, const char *srcdesc) {
+         if (do_destroy) {
+                 /* We're the last refcount holder, clean up eonce. */
+                 rd_kafka_enq_once_destroy0(eonce);
++                return 1;
+         }
++
++        return 0;
+ }
+ 
+ /**
