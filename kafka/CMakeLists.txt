@@ -16,4 +16,4 @@ target_link_libraries(tntkafka ${RDKAFKA_LIBRARY})
 set_target_properties(tntkafka PROPERTIES PREFIX "" OUTPUT_NAME "tntkafka")
 
 install(TARGETS tntkafka LIBRARY DESTINATION ${TARANTOOL_INSTALL_LIBDIR}/kafka)
-install(FILES init.lua DESTINATION ${TARANTOOL_INSTALL_LUADIR}/kafka)
+install(FILES init.lua version.lua DESTINATION ${TARANTOOL_INSTALL_LUADIR}/kafka)

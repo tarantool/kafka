@@ -471,4 +471,5 @@ return {
     Consumer = Consumer,
     Producer = Producer,
     _LIBRDKAFKA = tnt_kafka.librdkafka_version(),
+    _VERSION = require('kafka.version'),
 }
