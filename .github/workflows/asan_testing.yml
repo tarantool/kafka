@@ -14,7 +14,7 @@ jobs:
     # https://github.com/Dart-Code/Dart-Code/pull/2375
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/setup-python@v3
         with:

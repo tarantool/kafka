@@ -1,26 +1,26 @@
 Tarantool kafka
 ===============
-Full featured high performance kafka library for Tarantool based on [librdkafka](https://github.com/edenhill/librdkafka). 
+Full featured high performance kafka library for Tarantool based on [librdkafka](https://github.com/edenhill/librdkafka).
 
 Can produce more then 150k messages per second and consume more then 140k messages per second.
 
 ## Features
 * Kafka producer and consumer implementations.
 * Fiber friendly.
-* Mostly errorless functions and methods. Error handling in Tarantool ecosystem is quite a mess, 
-some libraries throws lua native `error` while others throws `box.error` instead. `kafka` returns 
+* Mostly errorless functions and methods. Error handling in Tarantool ecosystem is quite a mess,
+some libraries throws lua native `error` while others throws `box.error` instead. `kafka` returns
 non critical errors as strings which allows you to decide how to handle it.
 
-## Requirements 
+## Requirements
 * Tarantool >= 1.10.2
-* Tarantool development headers 
+* Tarantool development headers
 * librdkafka >= 0.11.5
 * librdkafka development headers
 * openssl-libs
 * openssl development headers
 * make
 * cmake
-* gcc 
+* gcc
 
 ## Installation
 ```bash
@@ -115,7 +115,7 @@ end
 producer:close()
 ```
 
-You can pass additional configuration parameters for librdkafka 
+You can pass additional configuration parameters for librdkafka
 https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md in special table `options` on client creation:
 ```lua
 tnt_kafka.Producer.create({
@@ -135,7 +135,7 @@ More examples in `examples` folder.
 
 ## Using SSL
 
-Connection to brokers using SSL supported by librdkafka itself so you only need to properly configure brokers by 
+Connection to brokers using SSL supported by librdkafka itself so you only need to properly configure brokers by
 using this guide https://github.com/edenhill/librdkafka/wiki/Using-SSL-with-librdkafka
 
 After that you only need to pass following configuration parameters on client creation:
