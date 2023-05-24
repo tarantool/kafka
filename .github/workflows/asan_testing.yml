@@ -26,12 +26,9 @@ jobs:
           submodules: true
 
       - name: Start Kafka
-        uses: 280780363/kafka-action@v1.0
+        uses: ybyzek/cp-all-in-one-action@v0.2.1
         with:
-          kafka version: "latest"
-          zookeeper version: "latest"
-          kafka port: 9092
-          auto create topic: "true"
+          type: cp-all-in-one-community
 
       - name: Install Python dependencies
         run: pip3 install -r tests/requirements.txt
