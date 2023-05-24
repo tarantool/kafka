@@ -1,6 +1,16 @@
 #ifndef TNT_KAFKA_COMMON_H
 #define TNT_KAFKA_COMMON_H
 
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+#include <librdkafka/rdkafka.h>
+#include <pthread.h>
+#include <stddef.h>
+#include <stdlib.h>
+
+#include <tarantool/module.h>
+
 #ifdef UNUSED
 #elif defined(__GNUC__)
 # define UNUSED(x) UNUSED_ ## x __attribute__((unused))
@@ -10,13 +20,38 @@
 # define UNUSED(x) x
 #endif
 
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
-#include <librdkafka/rdkafka.h>
-#include <pthread.h>
+/**
+ * You may use likely()/unlikely() to provide the compiler with branch
+ * prediction information.
+ *
+ * @sa https://en.cppreference.com/w/cpp/language/attributes/likely
+ */
+#if __has_builtin(__builtin_expect) || defined(__GNUC__)
+# define likely(x)    __builtin_expect(!! (x),1)
+# define unlikely(x)  __builtin_expect(!! (x),0)
+#else
+# define likely(x)    (x)
+# define unlikely(x)  (x)
+#endif
 
-#include <tarantool/module.h>
+/**
+ * An x* variant of a memory allocation function calls the original function
+ * and panics if it fails (i.e. it should never return NULL).
+ */
+#define xalloc_impl(size, func, args...)                                        \
+    ({                                                                          \
+        void *ret = func(args);                                                 \
+        if (unlikely(ret == NULL)) {                                            \
+            fprintf(stderr, "Can't allocate %zu bytes at %s:%d",                \
+                    (size_t)(size), __FILE__, __LINE__);                        \
+            exit(EXIT_FAILURE);                                                 \
+        }                                                                       \
+        ret;                                                                    \
+    })
+
+#define xmalloc(size)           xalloc_impl((size), malloc, (size))
+#define xcalloc(n, size)        xalloc_impl((n) * (size), calloc, (n), (size))
+#define xrealloc(ptr, size)     xalloc_impl((size), realloc, (ptr), (size))
 
 extern const char* const consumer_label;
 extern const char* const consumer_msg_label;
