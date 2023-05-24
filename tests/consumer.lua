@@ -165,7 +165,17 @@ local function metadata(timeout_ms)
 end
 
 local function list_groups(timeout_ms)
-    return consumer:list_groups({timeout_ms = timeout_ms})
+    local res, err = consumer:list_groups({timeout_ms = timeout_ms})
+    if err ~= nil then
+        return nil, err
+    end
+    log.info("Groups: %s", json.encode(res))
+    -- Some fields can have binary data that won't
+    -- be correctly processed by connector.
+    for _, group in ipairs(res) do 
+        group['members'] = nil
+    end
+    return res
 end
 
 local function pause()
