@@ -1,4 +1,4 @@
-name: fast_testing
+name: asan_testing
 
 on:
   push:
