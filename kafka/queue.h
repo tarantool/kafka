@@ -41,7 +41,7 @@ queue_pop(queue_t *queue);
  * @param value
  * @return
  */
-int
+void
 queue_lockfree_push(queue_t *queue, void *value);
 
 int

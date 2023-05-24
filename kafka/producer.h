@@ -30,7 +30,7 @@ typedef struct {
 
 producer_topics_t *new_producer_topics(int32_t capacity);
 
-int
+void
 add_producer_topics(producer_topics_t *topics, rd_kafka_topic_t *element);
 
 void

@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include <common.h>
 #include <queue.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,18 +55,10 @@ queue_pop(queue_t *queue) {
  * @param value
  * @return
  */
-int
+void
 queue_lockfree_push(queue_t *queue, void *value) {
-    if (value == NULL || queue == NULL) {
-        return -1;
-    }
-
     queue_node_t *new_node;
-    new_node = malloc(sizeof(queue_node_t));
-    if (new_node == NULL) {
-        return -1;
-    }
-
+    new_node = xmalloc(sizeof(queue_node_t));
     new_node->value = value;
     new_node->next = NULL;
 
@@ -79,8 +72,6 @@ queue_lockfree_push(queue_t *queue, void *value) {
     }
 
     queue->count += 1;
-
-    return 0;
 }
 
 int
@@ -90,21 +81,15 @@ queue_push(queue_t *queue, void *value) {
     }
 
     pthread_mutex_lock(&queue->lock);
-
-    int output = queue_lockfree_push(queue, value);
-
+    queue_lockfree_push(queue, value);
     pthread_mutex_unlock(&queue->lock);
 
-    return output;
+    return 0;
 }
 
 queue_t *
 new_queue() {
-    queue_t *queue = malloc(sizeof(queue_t));
-    if (queue == NULL) {
-        return NULL;
-    }
-
+    queue_t *queue = xmalloc(sizeof(queue_t));
     pthread_mutex_t lock;
     if (pthread_mutex_init(&lock, NULL) != 0) {
         free(queue);

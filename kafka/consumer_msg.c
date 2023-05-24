@@ -141,10 +141,7 @@ lua_consumer_msg_gc(struct lua_State *L) {
 msg_t *
 new_consumer_msg(rd_kafka_message_t *rd_message) {
     size_t message_size = sizeof(msg_t) + rd_message->len + rd_message->key_len;
-    msg_t *msg = calloc(message_size, 1);
-    if (msg == NULL)
-        return NULL;
-
+    msg_t *msg = xcalloc(message_size, 1);
     msg->topic = rd_message->rkt;
     msg->partition = rd_message->partition;
     msg->value = (char*)msg + sizeof(msg_t);

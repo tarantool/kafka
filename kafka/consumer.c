@@ -90,10 +90,7 @@ consumer_poll_loop(void *arg) {
 
 static consumer_poller_t *
 new_consumer_poller(rd_kafka_t *rd_consumer) {
-    consumer_poller_t *poller = malloc(sizeof(consumer_poller_t));
-    if (poller == NULL)
-        return NULL;
-
+    consumer_poller_t *poller = xmalloc(sizeof(consumer_poller_t));
     poller->rd_consumer = rd_consumer;
     poller->should_stop = 0;
 
@@ -719,7 +716,7 @@ lua_create_consumer(struct lua_State *L) {
     consumer_poller_t *poller = new_consumer_poller(rd_consumer);
 
     consumer_t *consumer;
-    consumer = malloc(sizeof(consumer_t));
+    consumer = xmalloc(sizeof(consumer_t));
     consumer->rd_consumer = rd_consumer;
     consumer->topics = NULL;
     consumer->event_queues = event_queues;

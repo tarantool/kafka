@@ -25,14 +25,11 @@
 
 log_msg_t *
 new_log_msg(int level, const char *fac, const char *buf) {
-    log_msg_t *msg = malloc(sizeof(log_msg_t));
-    if (msg == NULL) {
-        return NULL;
-    }
+    log_msg_t *msg = xmalloc(sizeof(log_msg_t));
     msg->level = level;
-    msg->fac = malloc(sizeof(char) * strlen(fac) + 1);
+    msg->fac = xmalloc(sizeof(char) * strlen(fac) + 1);
     strcpy(msg->fac, fac);
-    msg->buf = malloc(sizeof(char) * strlen(buf) + 1);
+    msg->buf = xmalloc(sizeof(char) * strlen(buf) + 1);
     strcpy(msg->buf, buf);
     return msg;
 }
@@ -78,11 +75,9 @@ stats_callback(rd_kafka_t *rd_kafka, char *json, size_t json_len, void *opaque) 
 
 error_msg_t *
 new_error_msg(int err, const char *reason) {
-    error_msg_t *msg = malloc(sizeof(error_msg_t));
-    if (msg == NULL)
-        return NULL;
+    error_msg_t *msg = xmalloc(sizeof(error_msg_t));
     msg->err = err;
-    msg->reason = malloc(sizeof(char) * strlen(reason) + 1);
+    msg->reason = xmalloc(sizeof(char) * strlen(reason) + 1);
     strcpy(msg->reason, reason);
     return msg;
 }
@@ -134,7 +129,7 @@ push_errors_cb_args(struct lua_State *L, const error_msg_t *msg)
 dr_msg_t *
 new_dr_msg(int dr_callback, int err) {
     dr_msg_t *dr_msg;
-    dr_msg = malloc(sizeof(dr_msg_t));
+    dr_msg = xmalloc(sizeof(dr_msg_t));
     dr_msg->dr_callback = dr_callback;
     dr_msg->err = err;
     return dr_msg;
@@ -165,11 +160,7 @@ msg_delivery_callback(rd_kafka_t *UNUSED(producer), const rd_kafka_message_t *ms
 
 rebalance_msg_t *
 new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
-    rebalance_msg_t *msg = malloc(sizeof(rebalance_msg_t));
-    if (msg == NULL) {
-        return NULL;
-    }
-
+    rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
     pthread_mutex_t lock;
     if (pthread_mutex_init(&lock, NULL) != 0) {
         free(msg);
@@ -193,11 +184,7 @@ new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
 
 rebalance_msg_t *
 new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
-    rebalance_msg_t *msg = malloc(sizeof(rebalance_msg_t));
-    if (msg == NULL) {
-        return NULL;
-    }
-
+    rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
     pthread_mutex_t lock;
     if (pthread_mutex_init(&lock, NULL) != 0) {
         free(msg);
@@ -221,11 +208,7 @@ new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
 
 rebalance_msg_t *
 new_rebalance_error_msg(rd_kafka_resp_err_t err) {
-    rebalance_msg_t *msg = malloc(sizeof(rebalance_msg_t));
-    if (msg == NULL) {
-        return NULL;
-    }
-
+    rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
     pthread_mutex_t lock;
     if (pthread_mutex_init(&lock, NULL) != 0) {
         free(msg);
@@ -326,7 +309,7 @@ rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic
 
 event_queues_t *
 new_event_queues() {
-    event_queues_t *event_queues = calloc(1, sizeof(event_queues_t));
+    event_queues_t *event_queues = xcalloc(1, sizeof(event_queues_t));
     for (int i = 0; i < MAX_QUEUE; i++)
         event_queues->cb_refs[i] = LUA_REFNIL;
     return event_queues;

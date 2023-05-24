@@ -53,10 +53,7 @@ producer_poll_loop(void *arg) {
 
 static producer_poller_t *
 new_producer_poller(rd_kafka_t *rd_producer) {
-    producer_poller_t *poller = malloc(sizeof(producer_poller_t));
-    if (poller == NULL)
-        return NULL;
-
+    producer_poller_t *poller = xmalloc(sizeof(producer_poller_t));
     poller->rd_producer = rd_producer;
     poller->should_stop = 0;
 
@@ -104,12 +101,9 @@ destroy_producer_poller(producer_poller_t *poller) {
 producer_topics_t *
 new_producer_topics(int32_t capacity) {
     rd_kafka_topic_t **elements;
-    elements = malloc(sizeof(rd_kafka_topic_t *) * capacity);
-    if (elements == NULL)
-        return NULL;
-
+    elements = xmalloc(sizeof(rd_kafka_topic_t *) * capacity);
     producer_topics_t *topics;
-    topics = malloc(sizeof(producer_topics_t));
+    topics = xmalloc(sizeof(producer_topics_t));
     topics->capacity = capacity;
     topics->count = 0;
     topics->elements = elements;
@@ -117,19 +111,14 @@ new_producer_topics(int32_t capacity) {
     return topics;
 }
 
-int
+void
 add_producer_topics(producer_topics_t *topics, rd_kafka_topic_t *element) {
     if (topics->count >= topics->capacity) {
-        rd_kafka_topic_t **new_elements = realloc(topics->elements, sizeof(rd_kafka_topic_t *) * topics->capacity * 2);
-        if (new_elements == NULL) {
-            printf("realloc failed to relloc rd_kafka_topic_t array.");
-            return 1;
-        }
+        rd_kafka_topic_t **new_elements = xrealloc(topics->elements, sizeof(rd_kafka_topic_t *) * topics->capacity * 2);
         topics->elements = new_elements;
         topics->capacity *= 2;
     }
     topics->elements[topics->count++] = element;
-    return 0;
 }
 
 static rd_kafka_topic_t *
@@ -312,10 +301,7 @@ lua_producer_produce(struct lua_State *L) {
             lua_pushstring(L, rd_kafka_err2str(rd_kafka_last_error()));
             goto error;
         }
-        if (add_producer_topics(producer->topics, rd_topic) != 0) {
-            lua_pushstring(L, "Unexpected error: failed to add new topic to topic list!");
-            goto error;
-        }
+        add_producer_topics(producer->topics, rd_topic);
     }
 
     rd_kafka_resp_err_t err = RD_KAFKA_RESP_ERR_NO_ERROR;
@@ -572,7 +558,7 @@ lua_create_producer(struct lua_State *L) {
     producer_poller_t *poller = new_producer_poller(rd_producer);
 
     producer_t *producer;
-    producer = malloc(sizeof(producer_t));
+    producer = xmalloc(sizeof(producer_t));
     producer->rd_producer = rd_producer;
     producer->topics = new_producer_topics(256);
     producer->event_queues = event_queues;
