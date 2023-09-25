@@ -8,8 +8,8 @@ Can produce more then 150k messages per second and consume more then 140k messag
 * Kafka producer and consumer implementations.
 * Fiber friendly.
 * Mostly errorless functions and methods. Error handling in Tarantool ecosystem is quite a mess, 
-some libraries throws lua native `error` while others throws `box.error` instead. `kafka` returns 
-non critical errors as strings which allows you to decide how to handle it.
+some libraries throw lua native `error` while others throws `box.error` instead. `kafka` returns 
+non-critical errors as strings which allows you to decide how to handle it.
 
 ## Requirements 
 * Tarantool >= 1.10.2
@@ -24,22 +24,22 @@ non critical errors as strings which allows you to decide how to handle it.
 
 ## Installation
 ```bash
-    tarantoolctl rocks install kafka
+    tt rocks install kafka
 ```
 
 ### Build module with statically linked librdkafka
 
-To install kafka module with builtin librdkafka dependency, use option `STATIC_BUILD`:
+To install the kafka module with builtin `librdkafka` dependency, use the `STATIC_BUILD` option:
 
 ```bash
-tarantoolctl rocks STATIC_BUILD=ON install kafka
+tt rocks STATIC_BUILD=ON install kafka
 ```
 
-Be aware, that this approach doesn't include static openssl.
+Be aware that this approach doesn't include static openssl.
 Instead, it assumes tarantool has openssl symbols exported.
 That means, kafka static build is only usable with static tarantool build.
 
-For successful static build you need to compile kafka
+For a successful static build, you need to compile kafka
 against the [same version of openssl](https://github.com/tarantool/tarantool/blob/800e5ed617f7cd352ec597ce16973c7e4cad76c8/static-build/CMakeLists.txt#L11) that tarantool does.
 
 ## Usage
