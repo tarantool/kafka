@@ -74,7 +74,7 @@ if(STATIC_BUILD)
 
     set(RDKAFKA_LIBRARY ${RDKAFKA_LIBRARY} librdkafka_static)
 else()
-    find_package(RDKAFKA REQUIRED)
+    find_package(RdKafka REQUIRED)
     # Link RdKafka transitive dependencies manually
     set(RDKAFKA_LIBRARY ${RDKAFKA_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 endif()
