@@ -40,7 +40,7 @@ jobs:
           export CXX=clang++
           git clone https://github.com/tarantool/tarantool
           cd tarantool
-          git checkout 2.10
+          git checkout release/2.11
           export LSAN_OPTIONS=suppressions=${PWD}/asan/lsan.supp
           cmake . -DENABLE_ASAN=ON -DENABLE_DIST=ON
           make -j16
