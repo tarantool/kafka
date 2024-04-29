@@ -157,6 +157,11 @@ def test_consumer_seek_partitions():
             assert item['value'] == value
 
 
+def test_consumer_create_errors():
+    server = get_server()
+    server.call("consumer.test_create_errors")
+
+
 def test_consumer_should_consume_msgs_from_multiple_topics():
     message1 = {
         "key": "test1",

@@ -317,6 +317,8 @@ new_event_queues() {
 
 void
 destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
+    if (event_queues == NULL)
+        return;
     if (event_queues->consume_queue != NULL) {
         msg_t *msg = NULL;
         while (true) {

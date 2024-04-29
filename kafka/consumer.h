@@ -5,33 +5,6 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
-#include <librdkafka/rdkafka.h>
-
-#include <common.h>
-#include <queue.h>
-#include <callbacks.h>
-#include <consumer_msg.h>
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * Consumer
- */
-
-typedef struct {
-    rd_kafka_t      *rd_consumer;
-    pthread_t       thread;
-    pthread_attr_t  attr;
-    int             should_stop;
-    pthread_mutex_t lock;
-} consumer_poller_t;
-
-typedef struct {
-    rd_kafka_t                      *rd_consumer;
-    rd_kafka_topic_partition_list_t *topics;
-    event_queues_t                  *event_queues;
-    consumer_poller_t               *poller;
-} consumer_t;
-
 int
 lua_consumer_subscribe(struct lua_State *L);
 

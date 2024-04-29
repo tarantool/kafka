@@ -176,3 +176,7 @@ def test_producer_should_log_debug():
     assert len(response[0]) > 0
 
     server.call("producer.close", [])
+
+def test_producer_create_errors():
+    server = get_server()
+    server.call("producer.test_create_errors")

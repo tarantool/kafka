@@ -1,3 +1,5 @@
+#include "producer.h"
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -10,13 +12,32 @@
 #include <callbacks.h>
 #include <queue.h>
 
-#include "producer.h"
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Producer poll thread
  */
+
+typedef struct producer_poller_t {
+    rd_kafka_t      *rd_producer;
+    pthread_t       thread;
+    pthread_attr_t  attr;
+    int             should_stop;
+    pthread_mutex_t lock;
+} producer_poller_t;
+
+typedef struct producer_topics_t {
+    rd_kafka_topic_t **elements;
+    int32_t count;
+    int32_t capacity;
+} producer_topics_t;
+
+typedef struct {
+    rd_kafka_t        *rd_producer;
+    producer_topics_t *topics;
+    event_queues_t    *event_queues;
+    producer_poller_t *poller;
+} producer_t;
 
 static void *
 producer_poll_loop(void *arg) {
@@ -98,7 +119,7 @@ destroy_producer_poller(producer_poller_t *poller) {
  * Producer
  */
 
-producer_topics_t *
+static producer_topics_t *
 new_producer_topics(int32_t capacity) {
     rd_kafka_topic_t **elements;
     elements = xmalloc(sizeof(rd_kafka_topic_t *) * capacity);
@@ -111,7 +132,7 @@ new_producer_topics(int32_t capacity) {
     return topics;
 }
 
-void
+static void
 add_producer_topics(producer_topics_t *topics, rd_kafka_topic_t *element) {
     if (topics->count >= topics->capacity) {
         rd_kafka_topic_t **new_elements = xrealloc(topics->elements, sizeof(rd_kafka_topic_t *) * topics->capacity * 2);
@@ -133,7 +154,7 @@ find_producer_topic_by_name(producer_topics_t *topics, const char *name) {
     return NULL;
 }
 
-void
+static void
 destroy_producer_topics(producer_topics_t *topics) {
     rd_kafka_topic_t **topic_p;
     rd_kafka_topic_t **end = topics->elements + topics->count;
@@ -448,8 +469,6 @@ lua_create_producer(struct lua_State *L) {
 
     char errstr[512];
 
-    rd_kafka_conf_t *rd_config = rd_kafka_conf_new();
-
     rd_kafka_topic_conf_t *topic_conf = rd_kafka_topic_conf_new();
     lua_pushstring(L, "default_topic_options");
     lua_gettable(L, -2);
@@ -461,7 +480,7 @@ lua_create_producer(struct lua_State *L) {
             if (!(lua_isstring(L, -1)) || !(lua_isstring(L, -2))) {
                 lua_pushnil(L);
                 lua_pushliteral(L, "producer config default topic options must contains only string keys and string values");
-                return 2;
+                goto topic_error;
             }
 
             const char *value = lua_tostring(L, -1);
@@ -469,7 +488,7 @@ lua_create_producer(struct lua_State *L) {
             if (rd_kafka_topic_conf_set(topic_conf, key, value, errstr, sizeof(errstr))) {
                 lua_pushnil(L);
                 lua_pushstring(L, errstr);
-                return 2;
+                goto topic_error;
             }
 
             // pop value, leaving original key
@@ -479,6 +498,8 @@ lua_create_producer(struct lua_State *L) {
         // stack now contains: -1 => table
     }
     lua_pop(L, 1);
+
+    rd_kafka_conf_t *rd_config = rd_kafka_conf_new();
     rd_kafka_conf_set_default_topic_conf(rd_config, topic_conf);
 
     event_queues_t *event_queues = new_event_queues();
@@ -522,7 +543,7 @@ lua_create_producer(struct lua_State *L) {
             if (!(lua_isstring(L, -1)) || !(lua_isstring(L, -2))) {
                 lua_pushnil(L);
                 lua_pushliteral(L, "producer config options must contains only string keys and string values");
-                return 2;
+                goto config_error;
             }
 
             const char *value = lua_tostring(L, -1);
@@ -530,7 +551,7 @@ lua_create_producer(struct lua_State *L) {
             if (rd_kafka_conf_set(rd_config, key, value, errstr, sizeof(errstr))) {
                 lua_pushnil(L);
                 lua_pushstring(L, errstr);
-                return 2;
+                goto config_error;
             }
 
             // pop value, leaving original key
@@ -545,13 +566,14 @@ lua_create_producer(struct lua_State *L) {
     if (!(rd_producer = rd_kafka_new(RD_KAFKA_PRODUCER, rd_config, errstr, sizeof(errstr)))) {
         lua_pushnil(L);
         lua_pushstring(L, errstr);
-        return 2;
+        goto config_error;
     }
 
+    rd_config = NULL; // was freed by rd_kafka_new
     if (rd_kafka_brokers_add(rd_producer, brokers) == 0) {
         lua_pushnil(L);
         lua_pushliteral(L, "No valid brokers specified");
-        return 2;
+        goto broker_error;
     }
 
     // creating background thread for polling consumer
@@ -570,6 +592,17 @@ lua_create_producer(struct lua_State *L) {
     luaL_getmetatable(L, producer_label);
     lua_setmetatable(L, -2);
     return 1;
+
+broker_error:
+    rd_kafka_destroy(rd_producer);
+config_error:
+    if (rd_config != NULL)
+        rd_kafka_conf_destroy(rd_config);
+    destroy_event_queues(L, event_queues);
+    return 2;
+topic_error:
+    rd_kafka_topic_conf_destroy(topic_conf);
+    return 2;
 }
 
 int

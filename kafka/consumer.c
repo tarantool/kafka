@@ -1,3 +1,5 @@
+#include "consumer.h"
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -10,13 +12,26 @@
 #include <queue.h>
 #include <consumer_msg.h>
 
-#include "consumer.h"
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Consumer poll thread
  */
+
+typedef struct consumer_poller_t {
+    rd_kafka_t      *rd_consumer;
+    pthread_t       thread;
+    pthread_attr_t  attr;
+    int             should_stop;
+    pthread_mutex_t lock;
+} consumer_poller_t;
+
+typedef struct {
+    rd_kafka_t                      *rd_consumer;
+    rd_kafka_topic_partition_list_t *topics;
+    event_queues_t                  *event_queues;
+    consumer_poller_t               *poller;
+} consumer_t;
 
 static void *
 consumer_poll_loop(void *arg) {
@@ -605,7 +620,6 @@ lua_create_consumer(struct lua_State *L) {
     }
 
     char errstr[512];
-    rd_kafka_conf_t *rd_config = rd_kafka_conf_new();
 
     rd_kafka_topic_conf_t *topic_conf = rd_kafka_topic_conf_new();
     lua_pushstring(L, "default_topic_options");
@@ -618,7 +632,7 @@ lua_create_consumer(struct lua_State *L) {
             if (!(lua_isstring(L, -1)) || !(lua_isstring(L, -2))) {
                 lua_pushnil(L);
                 lua_pushliteral(L, "consumer config default topic options must contains only string keys and string values");
-                return 2;
+                goto topic_error;
             }
 
             const char *value = lua_tostring(L, -1);
@@ -626,7 +640,7 @@ lua_create_consumer(struct lua_State *L) {
             if (rd_kafka_topic_conf_set(topic_conf, key, value, errstr, sizeof(errstr))) {
                 lua_pushnil(L);
                 lua_pushstring(L, errstr);
-                return 2;
+                goto topic_error;
             }
 
             // pop value, leaving original key
@@ -636,6 +650,8 @@ lua_create_consumer(struct lua_State *L) {
         // stack now contains: -1 => table
     }
     lua_pop(L, 1);
+
+    rd_kafka_conf_t *rd_config = rd_kafka_conf_new();
     rd_kafka_conf_set_default_topic_conf(rd_config, topic_conf);
 
     event_queues_t *event_queues = new_event_queues();
@@ -678,7 +694,7 @@ lua_create_consumer(struct lua_State *L) {
             if (!(lua_isstring(L, -1)) || !(lua_isstring(L, -2))) {
                 lua_pushnil(L);
                 lua_pushliteral(L, "consumer config options must contains only string keys and string values");
-                return 2;
+                goto config_error;
             }
 
             const char *value = lua_tostring(L, -1);
@@ -686,7 +702,7 @@ lua_create_consumer(struct lua_State *L) {
             if (rd_kafka_conf_set(rd_config, key, value, errstr, sizeof(errstr))) {
                 lua_pushnil(L);
                 lua_pushstring(L, errstr);
-                return 2;
+                goto config_error;
             }
 
             // pop value, leaving original key
@@ -701,13 +717,14 @@ lua_create_consumer(struct lua_State *L) {
     if (!(rd_consumer = rd_kafka_new(RD_KAFKA_CONSUMER, rd_config, errstr, sizeof(errstr)))) {
         lua_pushnil(L);
         lua_pushstring(L, errstr);
-        return 2;
+        goto config_error;
     }
 
+    rd_config = NULL; // was freed by rd_kafka_new
     if (rd_kafka_brokers_add(rd_consumer, brokers) == 0) {
         lua_pushnil(L);
         lua_pushliteral(L, "No valid brokers specified");
-        return 2;
+        goto broker_error;
     }
 
     rd_kafka_poll_set_consumer(rd_consumer);
@@ -728,6 +745,17 @@ lua_create_consumer(struct lua_State *L) {
     luaL_getmetatable(L, consumer_label);
     lua_setmetatable(L, -2);
     return 1;
+
+broker_error:
+    rd_kafka_destroy(rd_consumer);
+config_error:
+    if (rd_config != NULL)
+        rd_kafka_conf_destroy(rd_config);
+    destroy_event_queues(L, event_queues);
+    return 2;
+topic_error:
+    rd_kafka_topic_conf_destroy(topic_conf);
+    return 2;
 }
 
 int

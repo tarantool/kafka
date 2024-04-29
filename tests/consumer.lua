@@ -214,6 +214,40 @@ local function test_seek_partitions()
     return messages
 end
 
+local function test_create_errors()
+    log.info('Create without config')
+    local _, err = tnt_kafka.Consumer.create()
+    assert(err == 'config must not be nil')
+
+    log.info('Create with empty config')
+    local _, err = tnt_kafka.Consumer.create({})
+    assert(err == 'consumer config table must have non nil key \'brokers\' which contains string')
+
+    log.info('Create with empty brokers')
+    local _, err = tnt_kafka.Consumer.create({brokers = ''})
+    assert(err == 'No valid brokers specified')
+
+    log.info('Create with invalid default_topic_options keys')
+    local _, err = tnt_kafka.Consumer.create({brokers = '', default_topic_options = {[{}] = 2}})
+    assert(err == 'consumer config default topic options must contains only string keys and string values')
+
+    log.info('Create with invalid default_topic_options property')
+    local _, err = tnt_kafka.Consumer.create({brokers = '', default_topic_options = {[2] = 2}})
+    assert(err == 'No such configuration property: "2"')
+
+    log.info('Create with invalid options keys')
+    local _, err = tnt_kafka.Consumer.create({brokers = '', options = {[{}] = 2}})
+    assert(err == 'consumer config options must contains only string keys and string values')
+
+    log.info('Create with invalid options property')
+    local _, err = tnt_kafka.Consumer.create({brokers = '', options = {[2] = 2}})
+    assert(err == 'No such configuration property: "2"')
+
+    log.info('Create with incompatible properties')
+    local _, err = tnt_kafka.Consumer.create({brokers = '', options = {['reconnect.backoff.max.ms'] = '2', ['reconnect.backoff.ms'] = '1000'}})
+    assert(err == '`reconnect.backoff.max.ms` must be >= `reconnect.max.ms`')
+end
+
 return {
     create = create,
     subscribe = subscribe,
@@ -231,4 +265,5 @@ return {
     resume = resume,
 
     test_seek_partitions = test_seek_partitions,
+    test_create_errors = test_create_errors,
 }
