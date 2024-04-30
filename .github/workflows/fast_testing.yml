@@ -2,23 +2,22 @@ name: fast_testing
 
 on:
   push:
+    branches:
+      - master
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux:
-    # We want to run on external PRs, but not on our own internal
-    # PRs as they'll be run by the push to the branch.
-    #
-    # The main trick is described here:
-    # https://github.com/Dart-Code/Dart-Code/pull/2375
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-
     strategy:
       fail-fast: false
       matrix:
         tarantool:
-          - '2.10'
+          - '2.11'
 
     runs-on: ubuntu-latest
     steps:
@@ -27,14 +26,16 @@ jobs:
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
-      - uses: actions/setup-python@v3
-        with:
-          python-version: '3.10'
-
       - name: Clone the module
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: 'tests/requirements.txt'
 
       - name: Start Kafka
         uses: ybyzek/cp-all-in-one-action@v0.2.1
@@ -42,7 +43,7 @@ jobs:
           type: cp-all-in-one-community
 
       - name: Install Python dependencies
-        run: pip3 install -r tests/requirements.txt
+        run: pip install -r tests/requirements.txt
 
       - name: Build module
         run: |
