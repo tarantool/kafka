@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
 project(kafka C)
 
@@ -14,6 +14,8 @@ find_package(Tarantool REQUIRED)
 
 set(STATIC_BUILD "OFF" CACHE BOOL "Link dependencies statically?")
 set(WITH_OPENSSL_1_1 "OFF" CACHE BOOL "Require openssl version >= 1.1?")
+set(ENABLE_ASAN "OFF" CACHE BOOL "Enable ASAN")
+set(ENABLE_UBSAN "OFF" CACHE BOOL "Enable UBSAN")
 
 if (WITH_OPENSSL_1_1)
     find_package(OpenSSL 1.1 REQUIRED)
@@ -22,14 +24,25 @@ else()
 endif()
 message("Found OPENSSL version: ${OPENSSL_VERSION}")
 
-option(ENABLE_ASAN OFF)
 if (ENABLE_ASAN)
-    set(LIBRDKAFKA_C_FLAGS "-fsanitize=address")
-    set(LIBRDKAFKA_CXX_FLAGS "-fsanitize=address")
-    set(LIBRDKAFKA_FLAGS "--enable-devel")
+    list(APPEND SANITIZER_FLAGS -fsanitize=address)
+endif()
+
+if (ENABLE_UBSAN)
+    list(APPEND SANITIZER_FLAGS -fsanitize=undefined)
+endif()
+
+if (SANITIZER_FLAGS)
+    list(JOIN SANITIZER_FLAGS " " SANITIZER_FLAGS)
+    set(LIBRDKAFKA_FLAGS --enable-devel --disable-optimization)
+    set(CMAKE_BUILD_TYPE "Debug")
+    set(LIBRDKAFKA_CXX_FLAGS "${SANITIZER_FLAGS}")
+    set(LIBRDKAFKA_C_FLAGS "${SANITIZER_FLAGS}")
+    set(LIBRDKAFKA_LD_FLAGS "${SANITIZER_FLAGS}")
 endif()
 
 if (APPLE)
+    set(LIBRDKAFKA_LD_FLAGS "${LIBRDKAFKA_LD_FLAGS} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
     set(LIBRDKAFKA_CXX_FLAGS "${LIBRDKAFKA_CXX_FLAGS} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
     set(LIBRDKAFKA_C_FLAGS "${LIBRDKAFKA_C_FLAGS} ${CMAKE_C_SYSROOT_FLAG} ${CMAKE_OSX_SYSROOT}")
 endif()
@@ -46,6 +59,7 @@ if(STATIC_BUILD)
             --cxx=${CMAKE_CXX_COMPILER}
             --CFLAGS=${LIBRDKAFKA_C_FLAGS}
             --CPPFLAGS=${LIBRDKAFKA_CXX_FLAGS}
+            --LDFLAGS=${LIBRDKAFKA_LD_FLAGS}
             --prefix=<INSTALL_DIR>
             ${LIBRDKAFKA_FLAGS}
 

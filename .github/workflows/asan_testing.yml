@@ -43,11 +43,11 @@ jobs:
           cd tarantool
           git checkout release/2.11
           export LSAN_OPTIONS=suppressions=${PWD}/asan/lsan.supp
-          cmake . -DENABLE_ASAN=ON -DENABLE_DIST=ON
+          cmake . -DENABLE_ASAN=ON -DENABLE_UB_SANITIZER=ON -DENABLE_DIST=ON
           make -j16
           sudo make install
           cd ..
-          tarantoolctl rocks STATIC_BUILD=ON ENABLE_ASAN=ON make
+          tarantoolctl rocks STATIC_BUILD=ON ENABLE_ASAN=ON ENABLE_UBSAN=ON make
 
       - name: Run tarantool application
         run: |
