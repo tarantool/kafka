@@ -3,6 +3,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(tntkafka SHARED tnt_kafka.c callbacks.c consumer.c consumer_msg.c producer.c queue.c common.c)
 
+if (SANITIZER_FLAGS)
+    separate_arguments(SANITIZER_FLAGS UNIX_COMMAND "${SANITIZER_FLAGS}")
+    target_compile_options(tntkafka PRIVATE ${SANITIZER_FLAGS})
+    target_link_options(tntkafka PRIVATE ${SANITIZER_FLAGS})
+endif()
+
 if (APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} \
         -undefined suppress -flat_namespace")
