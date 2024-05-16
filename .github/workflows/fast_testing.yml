@@ -26,6 +26,17 @@ jobs:
         with:
           tarantool-version: ${{ matrix.tarantool }}
 
+      - name: Setup tt
+        run: |
+          curl -L https://tarantool.io/release/3/installer.sh | sudo bash
+          sudo apt update
+          sudo apt install -y tt
+
+      - name: Setup Tarantool master
+        run: |
+          tt --system --verbose init
+          tt --system --verbose install tarantool pr/10020
+
       - name: Clone the module
         uses: actions/checkout@v4
         with:
@@ -48,10 +59,10 @@ jobs:
       - name: Build module
         run: |
           export MAKEFLAGS=-j8
-          tarantoolctl rocks STATIC_BUILD=ON make
+          tt --system --verbose rocks --global --verbose STATIC_BUILD=ON make
 
       - name: Run tarantool application
-        run: TT_LOG=tarantool.log tarantool tests/app.lua > output.log 2>&1 &
+        run: TT_LOG=tarantool.log /opt/tarantool/bin/tarantool tests/app.lua > output.log 2>&1 &
 
       - name: Run test
         run: KAFKA_HOST=localhost:9092 pytest tests
