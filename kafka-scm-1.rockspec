@@ -27,6 +27,7 @@ build = {
         STATIC_BUILD="$(STATIC_BUILD)",
         ENABLE_ASAN="$(ENABLE_ASAN)",
         ENABLE_UBSAN="$(ENABLE_UBSAN)",
-        WITH_OPENSSL_1_1="$(WITH_OPENSSL_1_1)"
+        WITH_OPENSSL_1_1="$(WITH_OPENSSL_1_1)",
+        WITH_GSSAPI="$(WITH_GSSAPI)",
     }
 }
