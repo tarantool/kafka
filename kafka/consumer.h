@@ -59,4 +59,7 @@ lua_consumer_pause(struct lua_State *L);
 int
 lua_consumer_resume(struct lua_State *L);
 
+int
+lua_consumer_rebalance_protocol(struct lua_State *L);
+
 #endif //TNT_KAFKA_CONSUMER_H

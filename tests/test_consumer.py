@@ -379,6 +379,19 @@ def test_consumer_should_log_rebalances():
         assert len(response.data[0]) > 0
 
 
+def test_consumer_rebalance_protocol():
+    server = get_server()
+
+    with create_consumer(server, KAFKA_HOST, {"bootstrap.servers": KAFKA_HOST}):
+        time.sleep(5)
+        response = server.call("consumer.rebalance_protocol", [])
+        assert response[0] == 'NONE'
+
+        server.call("consumer.subscribe", [["test_unsub_partially_1"]])
+        response = server.call("consumer.rebalance_protocol", [])
+        assert response[0] == 'NONE'
+
+
 def test_consumer_should_continue_consuming_from_last_committed_offset():
     message1 = {
         "key": "test1",

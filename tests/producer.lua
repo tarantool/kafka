@@ -97,7 +97,7 @@ local function list_groups(timeout_ms)
     log.info("Groups: %s", json.encode(res))
     -- Some fields can have binary data that won't
     -- be correctly processed by connector.
-    for _, group in ipairs(res) do 
+    for _, group in ipairs(res) do
         group['members'] = nil
     end
     return res
