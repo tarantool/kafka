@@ -88,7 +88,7 @@ if(STATIC_BUILD)
     add_library(librdkafka_static INTERFACE)
     add_dependencies(librdkafka_static librdkafka)
     ExternalProject_Get_Property(librdkafka INSTALL_DIR)
-    target_include_directories(librdkafka_static INTERFACE ${INSTALL_DIR}/include)
+    target_include_directories(librdkafka_static SYSTEM INTERFACE ${INSTALL_DIR}/include)
     target_link_libraries(librdkafka_static INTERFACE ${INSTALL_DIR}/lib/librdkafka.a)
 
     set(RDKAFKA_LIBRARY ${RDKAFKA_LIBRARY} librdkafka_static)
