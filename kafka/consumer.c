@@ -821,3 +821,17 @@ int
 lua_consumer_resume(struct lua_State *L) {
     return lua_consumer_call_pause_resume(L, kafka_resume);
 }
+
+int
+lua_consumer_rebalance_protocol(struct lua_State *L) {
+    consumer_t **consumer_p = luaL_checkudata(L, 1, consumer_label);
+    if (consumer_p == NULL || *consumer_p == NULL)
+        return 0;
+
+    if ((*consumer_p)->rd_consumer != NULL) {
+        const char *proto = rd_kafka_rebalance_protocol((*consumer_p)->rd_consumer);
+        lua_pushstring(L, proto);
+        return 1;
+    }
+    return 0;
+}

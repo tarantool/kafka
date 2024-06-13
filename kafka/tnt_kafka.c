@@ -33,6 +33,7 @@ luaopen_kafka_tntkafka(lua_State *L) {
             {"resume", lua_consumer_resume},
             {"close", lua_consumer_close},
             {"destroy", lua_consumer_destroy},
+            {"rebalance_protocol", lua_consumer_rebalance_protocol},
             {"__tostring", lua_consumer_tostring},
             {NULL, NULL}
     };

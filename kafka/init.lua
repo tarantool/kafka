@@ -219,6 +219,10 @@ function Consumer:resume()
     return self._consumer:resume()
 end
 
+function Consumer:rebalance_protocol()
+    return self._consumer:rebalance_protocol()
+end
+
 function Consumer:seek_partitions(topic_partitions_list, options)
     local timeout_ms = get_timeout_from_options(options)
     return self._consumer:seek_partitions(topic_partitions_list, timeout_ms)

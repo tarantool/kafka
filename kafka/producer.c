@@ -631,7 +631,7 @@ lua_producer_metadata(struct lua_State *L) {
 
 int
 lua_producer_list_groups(struct lua_State *L) {
-    producer_t **producer_p = (producer_t **)luaL_checkudata(L, 1, producer_label);
+    producer_t **producer_p = luaL_checkudata(L, 1, producer_label);
     if (producer_p == NULL || *producer_p == NULL)
         return 0;
 

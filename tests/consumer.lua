@@ -172,7 +172,7 @@ local function list_groups(timeout_ms)
     log.info("Groups: %s", json.encode(res))
     -- Some fields can have binary data that won't
     -- be correctly processed by connector.
-    for _, group in ipairs(res) do 
+    for _, group in ipairs(res) do
         group['members'] = nil
     end
     return res
@@ -204,6 +204,9 @@ local function test_seek_partitions()
 
     for _ = 1, 5 do
         local msg = out:get(3)
+        if msg == nil then
+            error('Message is not delivered')
+        end
         log.info('Get message: %s', json.encode(msg_totable(msg)))
         append_message(messages, msg)
         consumer:seek_partitions({
@@ -212,6 +215,10 @@ local function test_seek_partitions()
     end
 
     return messages
+end
+
+local function rebalance_protocol()
+    return consumer:rebalance_protocol()
 end
 
 local function test_create_errors()
@@ -263,6 +270,7 @@ return {
     list_groups = list_groups,
     pause = pause,
     resume = resume,
+    rebalance_protocol = rebalance_protocol,
 
     test_seek_partitions = test_seek_partitions,
     test_create_errors = test_create_errors,
