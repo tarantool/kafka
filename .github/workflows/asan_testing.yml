@@ -34,6 +34,9 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r tests/requirements.txt
 
+      - name: Install dependencies
+        run: sudo apt install -y libreadline-dev
+
       - name: Build module
         run: |
           export MAKEFLAGS=-j8
