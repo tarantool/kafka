@@ -1,6 +1,6 @@
 Tarantool kafka
 ===============
-Full featured high performance kafka library for Tarantool based on [librdkafka](https://github.com/edenhill/librdkafka). 
+Full featured high performance kafka library for Tarantool based on [librdkafka](https://github.com/confluentinc/librdkafka).
 
 Can produce more then 150k messages per second and consume more then 140k messages per second.
 
@@ -116,7 +116,7 @@ producer:close()
 ```
 
 You can pass additional configuration parameters for librdkafka 
-https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md in special table `options` on client creation:
+https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md in special table `options` on client creation:
 ```lua
 tnt_kafka.Producer.create({
     options = {
@@ -136,7 +136,7 @@ More examples in `examples` folder.
 ## Using SSL
 
 Connection to brokers using SSL supported by librdkafka itself so you only need to properly configure brokers by 
-using this guide https://github.com/edenhill/librdkafka/wiki/Using-SSL-with-librdkafka
+using this guide https://github.com/confluentinc/librdkafka/wiki/Using-SSL-with-librdkafka
 
 After that you only need to pass following configuration parameters on client creation:
 ```lua
