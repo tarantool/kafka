@@ -285,7 +285,7 @@ def test_consumer_should_log_errors():
     server = get_server()
 
     with create_consumer(server, "kafka:9090"):
-        time.sleep(2)
+        time.sleep(5)
 
         response = server.call("consumer.get_errors", [])
 
