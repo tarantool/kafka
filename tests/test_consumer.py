@@ -262,6 +262,7 @@ def test_consumer_should_partially_unsubscribe_from_topics():
 
         write_into_kafka("test_unsub_partially_1", (message1, ))
         write_into_kafka("test_unsub_partially_2", (message2, ))
+        time.sleep(5)
 
         # waiting up to 30 seconds
         response = server.call("consumer.consume", [30])[0]
@@ -275,6 +276,7 @@ def test_consumer_should_partially_unsubscribe_from_topics():
 
         write_into_kafka("test_unsub_partially_1", (message3, ))
         write_into_kafka("test_unsub_partially_2", (message4, ))
+        time.sleep(5)
 
         response = server.call("consumer.consume", [30])[0]
 

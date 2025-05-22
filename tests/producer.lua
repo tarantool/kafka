@@ -142,7 +142,7 @@ local function test_create_errors()
 
     log.info('Create with incompatible properties')
     local _, err = tnt_kafka.Producer.create({brokers = '', options = {['reconnect.backoff.max.ms'] = '2', ['reconnect.backoff.ms'] = '1000'}})
-    assert(err == '`reconnect.backoff.max.ms` must be >= `reconnect.max.ms`')
+    assert(err == '`reconnect.backoff.max.ms` must be >= `reconnect.backoff.ms`')
 end
 
 return {
