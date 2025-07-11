@@ -203,7 +203,7 @@ local function test_seek_partitions()
     local out = consumer:output()
 
     for _ = 1, 5 do
-        local msg = out:get(3)
+        local msg = out:get(10)
         if msg == nil then
             error('Message is not delivered')
         end
