@@ -27,9 +27,9 @@ jobs:
           cache-dependency-path: 'tests/requirements.txt'
 
       - name: Start Kafka
-        uses: ybyzek/cp-all-in-one-action@v0.2.1
+        uses: spicyparrot/kafka-kraft-action@v1.1.3
         with:
-          type: cp-all-in-one-community
+          kafka-version: "4.0.0"
 
       - name: Install Python dependencies
         run: pip install -r tests/requirements.txt
