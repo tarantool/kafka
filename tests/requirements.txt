@@ -1,5 +1,5 @@
-pytest==8.2.0
-pytest-timeout==2.3.1
-kafka-python==2.0.2
-aiokafka==0.10.0
+pytest==8.4.2
+pytest-timeout==2.4.0
+kafka-python-ng==2.2.3
+aiokafka==0.12.0
 tarantool==1.2.0
