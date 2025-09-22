@@ -21,7 +21,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: tarantool/rocks.tarantool.org/github-action@master
         with:
           auth: ${{ secrets.ROCKS_AUTH }}
@@ -32,8 +32,8 @@ jobs:
     needs: version-check
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: tarantool/setup-tarantool@v3
+      - uses: actions/checkout@v5
+      - uses: tarantool/setup-tarantool@v4
         with:
           tarantool-version: '2.11'
       # Make a release
