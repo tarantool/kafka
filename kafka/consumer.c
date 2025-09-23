@@ -835,3 +835,122 @@ lua_consumer_rebalance_protocol(struct lua_State *L) {
     }
     return 0;
 }
+
+static ssize_t
+wait_consumer_offsets_for_times(va_list args) {
+    rd_kafka_t *rk = va_arg(args, rd_kafka_t *);
+    rd_kafka_topic_partition_list_t *list = va_arg(args, rd_kafka_topic_partition_list_t *);
+    int timeout_ms = va_arg(args, int);
+    rd_kafka_resp_err_t *errp = va_arg(args, rd_kafka_resp_err_t *);
+    *errp = rd_kafka_offsets_for_times(rk, list, timeout_ms);
+    return 0;
+}
+
+int
+lua_consumer_offsets_for_times(struct lua_State *L) {
+    if (lua_gettop(L) != 3)
+        luaL_error(L, "Usage: offsets, errs = consumer:offsets_for_times({{topic, partition, timestamp_ms}}, timeout_ms)");
+
+    consumer_t **consumer_p = luaL_checkudata(L, 1, consumer_label);
+    if (consumer_p == NULL || *consumer_p == NULL) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Broken consumer");
+        return 2;
+    }
+
+    luaL_checktype(L, 2, LUA_TTABLE);
+    int timeout_ms = luaL_checkint(L, 3);
+
+    size_t len = lua_objlen(L, 2);
+    rd_kafka_topic_partition_list_t *list = rd_kafka_topic_partition_list_new(len);
+    if (list == NULL)
+        luaL_error(L, "Out of memory: failed to allocate rd_kafka_topic_partition_list_t");
+
+    // {topic, partition, timestamp_ms} -> p->offset = timestamp_ms
+    for (size_t i = 1; i <= len; i++) {
+        luaL_pushint64(L, i);
+        lua_gettable(L, 2); // item = {topic, partition, timestamp_ms}
+
+        // topic
+        luaL_pushint64(L, 1);
+        lua_gettable(L, -2);
+        const char *topic = lua_tostring(L, -1);
+        lua_pop(L, 1);
+
+        // partition
+        luaL_pushint64(L, 2);
+        lua_gettable(L, -2);
+        int32_t partition = lua_tointeger(L, -1);
+        lua_pop(L, 1);
+
+        // timestamp_ms
+        luaL_pushint64(L, 3);
+        lua_gettable(L, -2);
+        int64_t ts_ms = luaL_toint64(L, -1);
+        lua_pop(L, 2); // pop timestamp_ms + item
+
+        rd_kafka_topic_partition_t *p = rd_kafka_topic_partition_list_add(list, topic, partition);
+        p->offset = ts_ms; // timestamp in ms
+    }
+
+    rd_kafka_resp_err_t ferr = RD_KAFKA_RESP_ERR_NO_ERROR;
+    coio_call(wait_consumer_offsets_for_times, (*consumer_p)->rd_consumer, list, timeout_ms, &ferr);
+
+    if (ferr != RD_KAFKA_RESP_ERR_NO_ERROR) {
+        rd_kafka_topic_partition_list_destroy(list);
+        lua_pushnil(L);
+        lua_pushstring(L, rd_kafka_err2str(ferr));
+        return 2;
+    }
+
+    // Result:
+    //    offsets = {{topic, partition, offset}, ...}
+    //    errs = nil | {{topic, partition, "errstr"}, ...} for partitions with p->err
+    lua_createtable(L, len, 0);    // offsets
+    int have_any_errors = 0;
+    lua_createtable(L, 0, 0);      // errs (empty for now)
+    int errs_idx = lua_gettop(L);
+
+    for (int i = 0; i < list->cnt; i++) {
+        rd_kafka_topic_partition_t *p = &list->elems[i];
+
+        // offsets[i+1] = {topic, partition, offset}
+        lua_createtable(L, 3, 0);
+        lua_pushstring(L, p->topic);
+        lua_rawseti(L, -2, 1);
+        lua_pushinteger(L, p->partition);
+        lua_rawseti(L, -2, 2);
+        luaL_pushint64(L, p->offset);
+        lua_rawseti(L, -2, 3);
+        lua_rawseti(L, -3, i + 1);
+
+        if (p->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+            have_any_errors = 1;
+            // errs[#errs+1] = {topic, partition, "err"}
+            lua_pushvalue(L, errs_idx);
+            int errs_len = lua_objlen(L, -1);
+            lua_pop(L, 1);
+
+            lua_createtable(L, 3, 0);
+            lua_pushstring(L, p->topic);                 lua_rawseti(L, -2, 1);
+            lua_pushinteger(L, p->partition);            lua_rawseti(L, -2, 2);
+            lua_pushstring(L, rd_kafka_err2str(p->err)); lua_rawseti(L, -2, 3);
+
+            lua_pushvalue(L, errs_idx); // errs
+            lua_pushvalue(L, -2);       // data
+            lua_rawseti(L, -2, errs_len + 1);
+            lua_pop(L, 1);
+            lua_pop(L, 1);
+        }
+    }
+
+    rd_kafka_topic_partition_list_destroy(list);
+
+    // Stack: [offsets][errs]
+    if (!have_any_errors) {
+        // replace errs with nil
+        lua_pop(L, 1);
+        lua_pushnil(L);
+    }
+    return 2;
+}
