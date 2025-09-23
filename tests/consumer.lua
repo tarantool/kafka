@@ -255,6 +255,34 @@ local function test_create_errors()
     assert(err == '`reconnect.backoff.max.ms` must be >= `reconnect.backoff.ms`')
 end
 
+local function offsets_for_times_topic(topic, ts_ms, timeout_ms)
+    local req = {{topic, 0, ts_ms}}
+    local offsets, errs = consumer:offsets_for_times(req, timeout_ms or 10000)
+    return offsets, errs
+end
+
+local function seek_from_time(topic, ts_ms, timeout_ms)
+    local offsets, errs = offsets_for_times_topic(topic, ts_ms, timeout_ms)
+    if errs ~= nil then
+        return nil, errs
+    end
+
+    local seeks = {}
+    for _, triple in ipairs(offsets) do
+        local t, p, o = triple[1], triple[2], triple[3]
+        if o ~= -1001 then
+            table.insert(seeks, {t, p, o})
+        end
+    end
+
+    local err = consumer:seek_partitions(seeks, timeout_ms or 10000)
+    if err ~= nil then
+        return nil, {{topic, 0, err}}
+    end
+
+    return seeks
+end
+
 return {
     create = create,
     subscribe = subscribe,
@@ -271,6 +299,8 @@ return {
     pause = pause,
     resume = resume,
     rebalance_protocol = rebalance_protocol,
+    offsets_for_times_topic = offsets_for_times_topic,
+    seek_from_time = seek_from_time,
 
     test_seek_partitions = test_seek_partitions,
     test_create_errors = test_create_errors,

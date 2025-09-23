@@ -34,6 +34,7 @@ luaopen_kafka_tntkafka(lua_State *L) {
             {"close", lua_consumer_close},
             {"destroy", lua_consumer_destroy},
             {"rebalance_protocol", lua_consumer_rebalance_protocol},
+            {"offsets_for_times", lua_consumer_offsets_for_times},
             {"__tostring", lua_consumer_tostring},
             {NULL, NULL}
     };

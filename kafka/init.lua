@@ -223,6 +223,10 @@ function Consumer:rebalance_protocol()
     return self._consumer:rebalance_protocol()
 end
 
+function Consumer:offsets_for_times(offsets, timeout_ms)
+    return self._consumer:offsets_for_times(offsets, timeout_ms)
+end
+
 function Consumer:seek_partitions(topic_partitions_list, options)
     local timeout_ms = get_timeout_from_options(options)
     return self._consumer:seek_partitions(topic_partitions_list, timeout_ms)
