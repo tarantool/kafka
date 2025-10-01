@@ -510,14 +510,48 @@ def test_consumer_should_be_closed():
         pass
 
 
-def test_offsets_for_times():
+def test_offsets_for_times_api():
+    topic = "test_offsets_for_times_api"
+    tag = randomword(6)
+
+    batch1 = [{"key": f"b1-{tag}-{i}", "value": f"v1-{tag}-{i}"} for i in range(3)]
+    write_into_kafka(topic, batch1)
+
+    time.sleep(2)
+    ts_cut_ms = int(time.time() * 1000)
+
+    batch2 = [{"key": f"b2-{tag}-{i}", "value": f"v2-{tag}-{i}"} for i in range(2)]
+    write_into_kafka(topic, batch2)
+
+    server = get_server()
+    group_id = f"g_offsets_for_times_api_{tag}"
+
+    with create_consumer(server, KAFKA_HOST, {"group.id": group_id}):
+        res = server.call("consumer.offsets_for_times", [[topic, 0, ts_cut_ms], ['invalid', 1000, ts_cut_ms]], 3000)
+        assert len(res) == 1 and len(res[0]) == 2
+
+        item = res[0][0]
+        assert item.get("topic") == topic
+        assert item.get("partition") == 0
+        assert "error_code" in item, item
+        assert item["error_code"] == 0
+        assert "error" not in item
+        assert isinstance(item.get("offset"), int) and item["offset"] >= 0
+
+        item = res[0][1]
+        assert item.get("topic") == "invalid"
+        assert item["error"] == "Broker: Unknown topic or partition"
+        assert item["error_code"] != 0
+
+
+def test_offsets_for_times_seek_from_cut():
     topic = "test_offsets_for_times"
     tag = randomword(6)
 
     batch1 = [{"key": f"b1-{tag}-{i}", "value": f"v1-{tag}-{i}"} for i in range(5)]
     write_into_kafka(topic, batch1)
 
-    time.sleep(5)
+    time.sleep(2)
     ts_cut_ms = int(time.time() * 1000)
 
     batch2 = [{"key": f"b2-{tag}-{i}", "value": f"v2-{tag}-{i}"} for i in range(5)]
@@ -531,23 +565,24 @@ def test_offsets_for_times():
 
         time.sleep(10)
 
-        res = server.call("consumer.seek_from_time", [topic, ts_cut_ms, 12000])
+        res = server.call("consumer.seek_from_time", [topic, ts_cut_ms, 5000])
+        assert len(res) == 1
 
-        assert len(res) >= 1, "seek_from_time returned nothing"
         applied = res[0]
-        errs = res[1] if len(res) > 1 else None
-        assert errs in (None, [],), f"offsets_for_times errors: {errs}"
-        assert len(applied) >= 1, f"no seeks applied: {applied}"
+        assert isinstance(applied, list) and len(applied) >= 1, f"no seeks applied: {applied}"
 
         for item in applied:
-            assert len(item) == 3, item
+            assert isinstance(item, list) and len(item) == 3, item
             t, p, o = item
             assert t == topic, f"unexpected topic in seek: {item}"
             assert isinstance(p, int)
-            assert isinstance(o, int) and o not in (-1001,), f"invalid offset in seek: {item}"
+            assert isinstance(o, int) and o != -1001, f"invalid offset in seek: {item}"
 
         msgs = server.call("consumer.consume", [4])[0]
         values = set(get_message_values(msgs))
 
         want = {m["value"] for m in batch2}
+        not_want = {m["value"] for m in batch1}
+
         assert values.issuperset(want), f"missing: {want - values}, got={values}"
+        assert values.isdisjoint(not_want), f"unexpected (batch1) values present: {values & not_want}"

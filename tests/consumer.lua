@@ -255,33 +255,73 @@ local function test_create_errors()
     assert(err == '`reconnect.backoff.max.ms` must be >= `reconnect.backoff.ms`')
 end
 
+local function offsets_for_times(...)
+    return consumer:offsets_for_times(...)
+end
+
 local function offsets_for_times_topic(topic, ts_ms, timeout_ms)
-    local req = {{topic, 0, ts_ms}}
-    local offsets, errs = consumer:offsets_for_times(req, timeout_ms or 10000)
-    return offsets, errs
+    return consumer:offsets_for_times({{topic, 0, ts_ms}}, timeout_ms or 10000)
+end
+
+local function drain_output(chan, max_seconds)
+    local deadline = fiber.time() + (max_seconds or 0.5)
+    local empty_rounds = 0
+    while fiber.time() < deadline do
+        local drained = 0
+        while true do
+            local msg = chan:get(0)
+            if msg == nil then
+                break
+            end
+            drained = drained + 1
+        end
+        if drained == 0 then
+            empty_rounds = empty_rounds + 1
+            if empty_rounds >= 3 then
+                break
+            end
+        else
+            empty_rounds = 0
+        end
+        fiber.sleep(0.01)
+    end
 end
 
 local function seek_from_time(topic, ts_ms, timeout_ms)
-    local offsets, errs = offsets_for_times_topic(topic, ts_ms, timeout_ms)
-    if errs ~= nil then
-        return nil, errs
+    local timeout = timeout_ms or 10000
+
+    consumer:pause()
+    drain_output(consumer:output(), 0.5)
+
+    local res, err = offsets_for_times_topic(topic, ts_ms, timeout)
+    if err ~= nil then
+        consumer:resume()
+        return nil, err
     end
 
     local seeks = {}
-    for _, triple in ipairs(offsets) do
-        local t, p, o = triple[1], triple[2], triple[3]
-        if o ~= -1001 then
-            table.insert(seeks, {t, p, o})
+    for _, e in ipairs(res) do
+        local ec = e.error_code or 0
+        local off = e.offset
+        if ec == 0 and off ~= -1001 then
+            table.insert(seeks, {e.topic, e.partition, off})
         end
     end
 
-    local err = consumer:seek_partitions(seeks, timeout_ms or 10000)
-    if err ~= nil then
-        return nil, {{topic, 0, err}}
+    if #seeks == 0 then
+        consumer:resume()
+        return {}
     end
 
+    local s_err = consumer:seek_partitions(seeks, timeout)
+    drain_output(consumer:output(), 0.1)
+    consumer:resume()
+
+    if s_err ~= nil then
+        return nil, s_err
+    end
     return seeks
-end
+ end
 
 return {
     create = create,
@@ -300,6 +340,7 @@ return {
     resume = resume,
     rebalance_protocol = rebalance_protocol,
     offsets_for_times_topic = offsets_for_times_topic,
+    offsets_for_times = offsets_for_times,
     seek_from_time = seek_from_time,
 
     test_seek_partitions = test_seek_partitions,
