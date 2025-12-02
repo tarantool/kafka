@@ -267,6 +267,13 @@ lua_producer_produce(struct lua_State *L) {
         return 1;
     }
 
+    int32_t partition = RD_KAFKA_PARTITION_UA;
+    lua_pushliteral(L, "partition");
+    lua_gettable(L, -2);
+    if (lua_isnumber(L, -1))
+        partition = lua_tonumber(L, -1);
+    lua_pop(L, 1);
+
     rd_kafka_headers_t *hdrs = NULL;
     lua_pushliteral(L, "headers");
     lua_gettable(L, -2);
@@ -327,14 +334,14 @@ lua_producer_produce(struct lua_State *L) {
 
     rd_kafka_resp_err_t err = RD_KAFKA_RESP_ERR_NO_ERROR;
     if (hdrs == NULL) {
-        int rc = rd_kafka_produce(rd_topic, -1, RD_KAFKA_MSG_F_COPY, value, value_len, key, key_len, dr_msg);
+        int rc = rd_kafka_produce(rd_topic, partition, RD_KAFKA_MSG_F_COPY, value, value_len, key, key_len, dr_msg);
         if (rc != 0)
             err = rd_kafka_last_error();
     } else {
         err = rd_kafka_producev(
                 producer->rd_producer,
                 RD_KAFKA_V_RKT(rd_topic),
-                RD_KAFKA_V_PARTITION(-1),
+                RD_KAFKA_V_PARTITION(partition),
                 RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
                 RD_KAFKA_V_VALUE(value, value_len),
                 RD_KAFKA_V_KEY(key, key_len),
