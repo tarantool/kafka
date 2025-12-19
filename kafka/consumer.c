@@ -114,6 +114,8 @@ new_consumer_poller(rd_kafka_t *rd_consumer) {
     pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE);
     int rc = pthread_create(&poller->thread, &poller->attr, consumer_poll_loop, (void *)poller);
     if (rc != 0) {
+        pthread_attr_destroy(&poller->attr);
+        pthread_mutex_destroy(&poller->lock);
         free(poller);
         return NULL;
     }
@@ -137,12 +139,17 @@ stop_poller(va_list args) {
 
 static void
 stop_consumer_poller(consumer_poller_t *poller) {
+    if (poller == NULL)
+        return;
     // stopping polling thread
     coio_call(stop_poller, poller);
 }
 
 static void
 destroy_consumer_poller(consumer_poller_t *poller) {
+    if (poller == NULL)
+        return;
+
     pthread_attr_destroy(&poller->attr);
     pthread_mutex_destroy(&poller->lock);
     free(poller);
@@ -168,7 +175,7 @@ lua_consumer_subscribe(struct lua_State *L) {
     consumer_t *consumer = lua_check_consumer(L, 1);
 
     if (consumer->topics == NULL) {
-        consumer->topics = rd_kafka_topic_partition_list_new(lua_objlen(L, 1));
+        consumer->topics = rd_kafka_topic_partition_list_new(lua_objlen(L, 2));
     }
 
     lua_pushnil(L);
@@ -187,7 +194,7 @@ lua_consumer_subscribe(struct lua_State *L) {
 
     rd_kafka_resp_err_t err = rd_kafka_subscribe(consumer->rd_consumer, consumer->topics);
     if (err) {
-        lua_pushstring(L, rd_kafka_err2str(err));
+        lua_push_kafka_error(L, consumer->rd_consumer, err);
         return 1;
     }
 
@@ -222,13 +229,13 @@ lua_consumer_unsubscribe(struct lua_State *L) {
     if (consumer->topics->cnt > 0) {
         rd_kafka_resp_err_t err = rd_kafka_subscribe(consumer->rd_consumer, consumer->topics);
         if (err) {
-            lua_pushstring(L, rd_kafka_err2str(err));
+            lua_push_kafka_error(L, consumer->rd_consumer, err);
             return 1;
         }
     } else {
         rd_kafka_resp_err_t err = rd_kafka_unsubscribe(consumer->rd_consumer);
         if (err) {
-            lua_pushstring(L, rd_kafka_err2str(err));
+            lua_push_kafka_error(L, consumer->rd_consumer, err);
             return 1;
         }
     }
@@ -421,12 +428,36 @@ lua_consumer_store_offset(struct lua_State *L) {
     if (lua_gettop(L) != 2)
         luaL_error(L, "Usage: err = consumer:store_offset(msg)");
 
+    consumer_t *consumer = lua_check_consumer(L, 1);
     const msg_t *msg = lua_check_consumer_msg(L, 2);
-    rd_kafka_resp_err_t err = rd_kafka_offset_store(msg->topic, msg->partition, msg->offset);
-    if (err) {
-        lua_pushstring(L, rd_kafka_err2str(err));
+
+    rd_kafka_topic_partition_list_t *offsets = rd_kafka_topic_partition_list_new(1);
+    if (offsets == NULL) {
+        lua_pushliteral(L, "Out of memory: failed to allocate topic_partition_list");
         return 1;
     }
+
+    /* rd_kafka_offsets_store() stores what you pass (no +1),
+     * while rd_kafka_offset_store() historically did +1 internally. */
+    rd_kafka_topic_partition_t *p =
+        rd_kafka_topic_partition_list_add(offsets, msg->topic_name, msg->partition);
+    p->offset = msg->offset + 1;
+
+    rd_kafka_resp_err_t err = rd_kafka_offsets_store(consumer->rd_consumer, offsets);
+
+    /* Per-partition status is in p->err */
+    rd_kafka_resp_err_t perr = p->err;
+
+    rd_kafka_topic_partition_list_destroy(offsets);
+
+    if (err == RD_KAFKA_RESP_ERR_NO_ERROR)
+        err = perr;
+
+    if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+        lua_push_kafka_error(L, consumer->rd_consumer, err);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -486,7 +517,8 @@ lua_consumer_seek_partitions(struct lua_State *L) {
               (*consumer_p)->rd_consumer, list, timeout_ms, &err);
     rd_kafka_topic_partition_list_destroy(list);
     if (err != NULL) {
-        lua_pushstring(L, rd_kafka_error_string(err));
+        lua_push_kafka_error(L, (*consumer_p)->rd_consumer, rd_kafka_error_code(err));
+        rd_kafka_error_destroy(err);
         return 1;
     }
     return 0;
@@ -539,10 +571,19 @@ wait_consumer_destroy(va_list args) {
 }
 
 static void
+consumer_stop_and_destroy_poller(consumer_t *consumer) {
+    if (consumer == NULL || consumer->poller == NULL)
+        return;
+
+    stop_consumer_poller(consumer->poller);
+    destroy_consumer_poller(consumer->poller);
+    consumer->poller = NULL;
+}
+
+static void
 consumer_destroy(struct lua_State *L, consumer_t *consumer) {
-    if (consumer->rd_consumer != NULL) {
-        stop_consumer_poller(consumer->poller);
-    }
+    /* Poller might have been stopped in :close() already */
+    consumer_stop_and_destroy_poller(consumer);
 
     if (consumer->topics != NULL) {
         rd_kafka_topic_partition_list_destroy(consumer->topics);
@@ -562,11 +603,6 @@ consumer_destroy(struct lua_State *L, consumer_t *consumer) {
         consumer->rd_consumer = NULL;
     }
 
-    if (consumer->poller != NULL) {
-        destroy_consumer_poller(consumer->poller);
-        consumer->poller = NULL;
-    }
-
     if (consumer->event_queues != NULL) {
         destroy_event_queues(L, consumer->event_queues);
         consumer->event_queues = NULL;
@@ -582,6 +618,11 @@ lua_consumer_close(struct lua_State *L) {
         lua_pushboolean(L, 0);
         return 1;
     }
+
+    // Stop background poller first.
+    // rd_kafka_consumer_poll() / rd_kafka_consumer_close() must not run concurrently
+    // from multiple threads on the same consumer handle.
+    consumer_stop_and_destroy_poller(*consumer_p);
 
     // unsubscribe consumer to make possible close it
     rd_kafka_unsubscribe((*consumer_p)->rd_consumer);
@@ -731,6 +772,11 @@ lua_create_consumer(struct lua_State *L) {
 
     // creating background thread for polling consumer
     consumer_poller_t *poller = new_consumer_poller(rd_consumer);
+    if (poller == NULL) {
+        lua_pushnil(L);
+        lua_pushliteral(L, "Failed to create consumer poller thread");
+        goto broker_error;
+    }
 
     consumer_t *consumer;
     consumer = xmalloc(sizeof(consumer_t));
@@ -805,7 +851,7 @@ lua_consumer_call_pause_resume(struct lua_State *L, rd_kafka_resp_err_t (*fun)(r
     if ((*consumer_p)->rd_consumer != NULL) {
         rd_kafka_resp_err_t err = fun((*consumer_p)->rd_consumer);
         if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-            lua_pushstring(L, rd_kafka_err2str(err));
+            lua_push_kafka_error(L, (*consumer_p)->rd_consumer, err);
             return 1;
         }
     }
@@ -899,7 +945,7 @@ lua_consumer_offsets_for_times(struct lua_State *L) {
     if (ferr != RD_KAFKA_RESP_ERR_NO_ERROR) {
         rd_kafka_topic_partition_list_destroy(list);
         lua_pushnil(L);
-        lua_pushstring(L, rd_kafka_err2str(ferr));
+        lua_push_kafka_error(L, (*consumer_p)->rd_consumer, ferr);
         return 2;
     }
 
@@ -923,7 +969,7 @@ lua_consumer_offsets_for_times(struct lua_State *L) {
         lua_setfield(L, -2, "error_code");
 
         if (p->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-            lua_pushstring(L, rd_kafka_err2str(p->err));
+            lua_push_kafka_error(L, (*consumer_p)->rd_consumer, p->err);
             lua_setfield(L, -2, "error");
         }
 

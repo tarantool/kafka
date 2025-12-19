@@ -8,6 +8,19 @@ const char* const consumer_label = "__tnt_kafka_consumer";
 const char* const consumer_msg_label = "__tnt_kafka_consumer_msg";
 const char* const producer_label = "__tnt_kafka_producer";
 
+int
+lua_push_kafka_error(struct lua_State *L, rd_kafka_t *rk, rd_kafka_resp_err_t err)
+{
+    if (err == RD_KAFKA_RESP_ERR__FATAL) {
+        char fatal[512];
+        rd_kafka_resp_err_t underlying = rd_kafka_fatal_error(rk, fatal, sizeof(fatal));
+        lua_pushfstring(L, "%s: %s", rd_kafka_err2str(err), rd_kafka_err2str(underlying));
+    } else {
+        lua_pushstring(L, rd_kafka_err2str(err));
+    }
+    return 1;
+}
+
 /**
  * Push native lua error with code -3
  */
@@ -75,7 +88,7 @@ lua_librdkafka_metadata(struct lua_State *L, rd_kafka_t *rk, rd_kafka_topic_t *o
 
     if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
         lua_pushnil(L);
-        lua_pushstring(L, rd_kafka_err2str(err));
+        lua_push_kafka_error(L, rk, err);
         return 2;
     }
 
@@ -135,7 +148,7 @@ lua_librdkafka_metadata(struct lua_State *L, rd_kafka_t *rk, rd_kafka_topic_t *o
                 lua_settable(L, -3);
 
                 lua_pushliteral(L, "error"); // metadata.topics[i].partitions[j].error
-                lua_pushstring(L, rd_kafka_err2str(metadatap->topics[i].partitions[j].err));
+                lua_push_kafka_error(L, rk, metadatap->topics[i].partitions[j].err);
                 lua_settable(L, -3);
             }
 
@@ -167,7 +180,7 @@ lua_librdkafka_metadata(struct lua_State *L, rd_kafka_t *rk, rd_kafka_topic_t *o
             lua_settable(L, -3);
 
             lua_pushliteral(L, "error"); // metadata.topics[i].error
-            lua_pushstring(L, rd_kafka_err2str(metadatap->topics[i].err));
+            lua_push_kafka_error(L, rk, metadatap->topics[i].err);
             lua_settable(L, -3);
         }
 
@@ -203,7 +216,7 @@ lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *grou
 
     if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
         lua_pushnil(L);
-        lua_pushstring(L, rd_kafka_err2str(err));
+        lua_push_kafka_error(L, rk, err);
         return 2;
     }
 
@@ -239,7 +252,7 @@ lua_librdkafka_list_groups(struct lua_State *L, rd_kafka_t *rk, const char *grou
             lua_settable(L, -3);
 
             lua_pushliteral(L, "error");
-            lua_pushstring(L, rd_kafka_err2str(grplistp->groups[i].err));
+            lua_push_kafka_error(L, rk, grplistp->groups[i].err);
             lua_settable(L, -3);
         }
 

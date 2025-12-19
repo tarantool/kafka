@@ -82,7 +82,9 @@ new_producer_poller(rd_kafka_t *rd_producer) {
     pthread_attr_init(&poller->attr);
     pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE);
     int rc = pthread_create(&poller->thread, &poller->attr, producer_poll_loop, (void *)poller);
-    if (rc < 0) {
+    if (rc != 0) {
+        pthread_attr_destroy(&poller->attr);
+        pthread_mutex_destroy(&poller->lock);
         free(poller);
         return NULL;
     }
@@ -202,7 +204,7 @@ lua_producer_msg_delivery_poll(struct lua_State *L) {
         callbacks_count += 1;
         lua_rawgeti(L, LUA_REGISTRYINDEX, dr_msg->dr_callback);
         if (dr_msg->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-            lua_pushstring(L, rd_kafka_err2str(dr_msg->err));
+            lua_push_kafka_error(L, producer->rd_producer, dr_msg->err);
         } else {
             lua_pushnil(L);
         }
@@ -274,6 +276,7 @@ lua_producer_produce(struct lua_State *L) {
         partition = lua_tonumber(L, -1);
     lua_pop(L, 1);
 
+    dr_msg_t *dr_msg = NULL;
     rd_kafka_headers_t *hdrs = NULL;
     lua_pushliteral(L, "headers");
     lua_gettable(L, -2);
@@ -305,7 +308,6 @@ lua_producer_produce(struct lua_State *L) {
     lua_pop(L, 1);
 
     // create delivery callback queue if got msg id
-    dr_msg_t *dr_msg = NULL;
     lua_pushliteral(L, "dr_callback");
     lua_gettable(L, -2);
     if (lua_isfunction(L, -1)) {
@@ -326,41 +328,38 @@ lua_producer_produce(struct lua_State *L) {
     if (rd_topic == NULL) {
         rd_topic = rd_kafka_topic_new(producer->rd_producer, topic, NULL);
         if (rd_topic == NULL) {
-            lua_pushstring(L, rd_kafka_err2str(rd_kafka_last_error()));
+            lua_push_kafka_error(L, producer->rd_producer, rd_kafka_last_error());
             goto error;
         }
         add_producer_topics(producer->topics, rd_topic);
     }
 
-    rd_kafka_resp_err_t err = RD_KAFKA_RESP_ERR_NO_ERROR;
-    if (hdrs == NULL) {
-        int rc = rd_kafka_produce(rd_topic, partition, RD_KAFKA_MSG_F_COPY, value, value_len, key, key_len, dr_msg);
-        if (rc != 0)
-            err = rd_kafka_last_error();
-    } else {
-        err = rd_kafka_producev(
-                producer->rd_producer,
-                RD_KAFKA_V_RKT(rd_topic),
-                RD_KAFKA_V_PARTITION(partition),
-                RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
-                RD_KAFKA_V_VALUE(value, value_len),
-                RD_KAFKA_V_KEY(key, key_len),
-                RD_KAFKA_V_HEADERS(hdrs),
-                RD_KAFKA_V_OPAQUE(dr_msg),
-                RD_KAFKA_V_END);
-        if (err != RD_KAFKA_RESP_ERR_NO_ERROR)
-            rd_kafka_headers_destroy(hdrs);
-    }
+    rd_kafka_vu_t vus[8];
+    size_t n = 0;
 
-    if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-        lua_pushstring(L, rd_kafka_err2str(err));
-        return 1;
-    }
-    return 0;
+    vus[n++] = (rd_kafka_vu_t){ .vtype = RD_KAFKA_VTYPE_RKT, .u.rkt = rd_topic };
+    vus[n++] = (rd_kafka_vu_t){ .vtype = RD_KAFKA_VTYPE_PARTITION, .u.i32 = partition };
+    vus[n++] = (rd_kafka_vu_t){ .vtype = RD_KAFKA_VTYPE_MSGFLAGS, .u.i = RD_KAFKA_MSG_F_COPY };
+    vus[n++] = (rd_kafka_vu_t){ .vtype = RD_KAFKA_VTYPE_VALUE, .u.mem = { .ptr = (void*)value, .size = value_len } };
+    vus[n++] = (rd_kafka_vu_t){ .vtype = RD_KAFKA_VTYPE_KEY, .u.mem = { .ptr = (void*)key, .size = key_len } };
+    vus[n++] = (rd_kafka_vu_t){ .vtype = RD_KAFKA_VTYPE_OPAQUE, .u.ptr = dr_msg };
+    if (hdrs)
+        vus[n++] = (rd_kafka_vu_t){ .vtype = RD_KAFKA_VTYPE_HEADERS, .u.headers = hdrs };
+
+    rd_kafka_error_t *e = rd_kafka_produceva(producer->rd_producer, vus, n);
+    if (e == NULL)
+        return 0;
+
+    lua_push_kafka_error(L, producer->rd_producer, rd_kafka_error_code(e));
+    rd_kafka_error_destroy(e);
 
 error:
     if (hdrs != NULL)
         rd_kafka_headers_destroy(hdrs);
+    if (dr_msg != NULL) {
+        luaL_unref(L, LUA_REGISTRYINDEX, dr_msg->dr_callback);
+        destroy_dr_msg(dr_msg);
+    }
     return 1;
 }
 
@@ -386,6 +385,11 @@ wait_producer_destroy(va_list args) {
 
 static void
 destroy_producer(struct lua_State *L, producer_t *producer) {
+    if (producer->poller != NULL) {
+        destroy_producer_poller(producer->poller);
+        producer->poller = NULL;
+    }
+
     if (producer->topics != NULL) {
         destroy_producer_topics(producer->topics);
         producer->topics = NULL;
@@ -401,11 +405,6 @@ destroy_producer(struct lua_State *L, producer_t *producer) {
         /* Destroy handle */
         coio_call(wait_producer_destroy, producer->rd_producer);
         producer->rd_producer = NULL;
-    }
-
-    if (producer->poller != NULL) {
-        destroy_producer_poller(producer->poller);
-        producer->poller = NULL;
     }
 
     if (producer->event_queues != NULL) {
@@ -585,6 +584,11 @@ lua_create_producer(struct lua_State *L) {
 
     // creating background thread for polling consumer
     producer_poller_t *poller = new_producer_poller(rd_producer);
+    if (poller == NULL) {
+        lua_pushnil(L);
+        lua_pushliteral(L, "Failed to create producer poller thread");
+        goto broker_error;
+    }
 
     producer_t *producer;
     producer = xmalloc(sizeof(producer_t));

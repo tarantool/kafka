@@ -1,7 +1,7 @@
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <pthread.h>
+#include "callbacks.h"
+#include "common.h"
+#include "consumer_msg.h"
+#include "queue.h"
 
 #include <lua.h>
 #include <lualib.h>
@@ -9,10 +9,10 @@
 
 #include <librdkafka/rdkafka.h>
 
-#include <common.h>
-#include <consumer_msg.h>
-#include <queue.h>
-#include <callbacks.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <pthread.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -161,21 +161,17 @@ msg_delivery_callback(rd_kafka_t *UNUSED(producer), const rd_kafka_message_t *ms
 rebalance_msg_t *
 new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
     rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    pthread_mutex_t lock;
-    if (pthread_mutex_init(&lock, NULL) != 0) {
+    if (pthread_mutex_init(&msg->lock, NULL) != 0) {
         free(msg);
         return NULL;
     }
 
-    msg->lock = lock;
-
-    pthread_cond_t sync;
-    if (pthread_cond_init(&sync, NULL) != 0) {
+    if (pthread_cond_init(&msg->sync, NULL) != 0) {
+        pthread_mutex_destroy(&msg->lock);
         free(msg);
         return NULL;
     }
 
-    msg->sync = sync;
     msg->revoked = revoked;
     msg->assigned = NULL;
     msg->err = RD_KAFKA_RESP_ERR_NO_ERROR;
@@ -185,21 +181,17 @@ new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
 rebalance_msg_t *
 new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
     rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    pthread_mutex_t lock;
-    if (pthread_mutex_init(&lock, NULL) != 0) {
+    if (pthread_mutex_init(&msg->lock, NULL) != 0) {
         free(msg);
         return NULL;
     }
 
-    msg->lock = lock;
-
-    pthread_cond_t sync;
-    if (pthread_cond_init(&sync, NULL) != 0) {
+    if (pthread_cond_init(&msg->sync, NULL) != 0) {
+        pthread_mutex_destroy(&msg->lock);
         free(msg);
         return NULL;
     }
 
-    msg->sync = sync;
     msg->revoked = NULL;
     msg->assigned = assigned;
     msg->err = RD_KAFKA_RESP_ERR_NO_ERROR;
@@ -209,21 +201,17 @@ new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
 rebalance_msg_t *
 new_rebalance_error_msg(rd_kafka_resp_err_t err) {
     rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    pthread_mutex_t lock;
-    if (pthread_mutex_init(&lock, NULL) != 0) {
+    if (pthread_mutex_init(&msg->lock, NULL) != 0) {
         free(msg);
         return NULL;
     }
 
-    msg->lock = lock;
-
-    pthread_cond_t sync;
-    if (pthread_cond_init(&sync, NULL) != 0) {
+    if (pthread_cond_init(&msg->sync, NULL) != 0) {
+        pthread_mutex_destroy(&msg->lock);
         free(msg);
         return NULL;
     }
 
-    msg->sync = sync;
     msg->revoked = NULL;
     msg->assigned = NULL;
     msg->err = err;
@@ -354,6 +342,7 @@ destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
                     destroy_log_msg(msg);
                     break;
                 case STATS_QUEUE:
+                    free(msg);
                     break;
                 case ERROR_QUEUE:
                     destroy_error_msg(msg);

@@ -1,15 +1,15 @@
 #ifndef TNT_KAFKA_COMMON_H
 #define TNT_KAFKA_COMMON_H
 
+#include <tarantool/module.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 #include <librdkafka/rdkafka.h>
+
 #include <pthread.h>
 #include <stddef.h>
 #include <stdlib.h>
-
-#include <tarantool/module.h>
 
 #ifdef UNUSED
 #elif defined(__GNUC__)
@@ -83,5 +83,8 @@ kafka_pause(rd_kafka_t *rk);
 
 rd_kafka_resp_err_t
 kafka_resume(rd_kafka_t *rk);
+
+int
+lua_push_kafka_error(struct lua_State *L, rd_kafka_t *rk, rd_kafka_resp_err_t err);
 
 #endif //TNT_KAFKA_COMMON_H

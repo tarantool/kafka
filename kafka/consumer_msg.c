@@ -1,11 +1,11 @@
-#include <stdlib.h>
-#include <string.h>
+#include "common.h"
+#include "consumer_msg.h"
 
 #include <tarantool/module.h>
 
-#include <common.h>
-
-#include <consumer_msg.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 static const char null_literal[] = "NULL";
 
@@ -25,7 +25,7 @@ lua_check_consumer_msg(struct lua_State *L, int index) {
 int
 lua_consumer_msg_topic(struct lua_State *L) {
     const msg_t *msg = lua_check_consumer_msg(L, 1);
-    lua_pushstring(L, rd_kafka_topic_name(msg->topic));
+    lua_pushstring(L, msg->topic_name);
     return 1;
 }
 
@@ -117,8 +117,8 @@ lua_consumer_msg_tostring(struct lua_State *L) {
     }
 
     lua_pushfstring(L,
-                    "Kafka Consumer Message: topic=%s partition=%d offset=%d key=%s value=%s",
-                    rd_kafka_topic_name(msg->topic),
+                    "Kafka Consumer Message: topic=%s partition=%d offset=%lld key=%s value=%s",
+                    msg->topic_name,
                     msg->partition,
                     msg->offset,
                     key,
@@ -139,13 +139,18 @@ lua_consumer_msg_gc(struct lua_State *L) {
 }
 
 msg_t *
-new_consumer_msg(rd_kafka_message_t *rd_message) {
-    size_t message_size = sizeof(msg_t) + rd_message->len + rd_message->key_len;
+new_consumer_msg(const rd_kafka_message_t *rd_message) {
+    const char *topic_name = rd_kafka_topic_name(rd_message->rkt);
+    if (topic_name == NULL)
+        topic_name = "";
+
+    size_t topic_name_len = strlen(topic_name);
+    size_t message_size = sizeof(msg_t) + rd_message->len + rd_message->key_len + topic_name_len + 1;
     msg_t *msg = xcalloc(message_size, 1);
-    msg->topic = rd_message->rkt;
     msg->partition = rd_message->partition;
     msg->value = (char*)msg + sizeof(msg_t);
     msg->key = (char*)msg + sizeof(msg_t) + rd_message->len;
+    msg->topic_name = (char*)msg + sizeof(msg_t) + rd_message->len + rd_message->key_len;
 
     // headers
     rd_kafka_headers_t *hdrsp;
@@ -163,6 +168,9 @@ new_consumer_msg(rd_kafka_message_t *rd_message) {
         memcpy(msg->key, rd_message->key, rd_message->key_len);
     msg->key_len = rd_message->key_len;
     msg->offset = rd_message->offset;
+
+    // topic name
+    strncpy(msg->topic_name, topic_name, topic_name_len + 1);
 
     return msg;
 }

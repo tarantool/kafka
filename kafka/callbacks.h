@@ -1,8 +1,8 @@
 #ifndef TNT_KAFKA_CALLBACKS_H
 #define TNT_KAFKA_CALLBACKS_H
 
-#include <pthread.h>
-#include <stddef.h>
+#include "common.h"
+#include "queue.h"
 
 #include <lua.h>
 #include <lualib.h>
@@ -10,7 +10,8 @@
 
 #include <librdkafka/rdkafka.h>
 
-#include <queue.h>
+#include <pthread.h>
+#include <stddef.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /**

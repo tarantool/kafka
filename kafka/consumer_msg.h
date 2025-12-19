@@ -12,7 +12,6 @@
  * Consumer Message
  */
 typedef struct {
-    rd_kafka_topic_t *topic;
     rd_kafka_headers_t *headers;
     int32_t           partition;
     char              *value;
@@ -20,11 +19,12 @@ typedef struct {
     char              *key;
     size_t            key_len;
     int64_t           offset;
+    char              *topic_name;
 } msg_t;
 
 msg_t *lua_check_consumer_msg(struct lua_State *L, int index);
 
-msg_t *new_consumer_msg(rd_kafka_message_t *rd_message);
+msg_t *new_consumer_msg(const rd_kafka_message_t *rd_message);
 
 void destroy_consumer_msg(msg_t *msg);
 

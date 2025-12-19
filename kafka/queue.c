@@ -7,7 +7,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
- * General thread safe queue based on licked list
+ * General thread safe queue based on linked list
  */
 
 /**
@@ -19,6 +19,9 @@
  */
 void *
 queue_lockfree_pop(queue_t *queue) {
+    if (queue == NULL)
+        return NULL;
+
     void *output = NULL;
 
     if (queue->head != NULL) {
@@ -38,10 +41,11 @@ queue_lockfree_pop(queue_t *queue) {
 
 void *
 queue_pop(queue_t *queue) {
+    if (queue == NULL)
+        return NULL;
+
     pthread_mutex_lock(&queue->lock);
-
     void *output = queue_lockfree_pop(queue);
-
     pthread_mutex_unlock(&queue->lock);
 
     return output;
@@ -57,19 +61,20 @@ queue_pop(queue_t *queue) {
  */
 void
 queue_lockfree_push(queue_t *queue, void *value) {
+    if (queue == NULL)
+        return;
+
     queue_node_t *new_node;
     new_node = xmalloc(sizeof(queue_node_t));
     new_node->value = value;
     new_node->next = NULL;
 
-    if (queue->tail != NULL) {
+    if (queue->tail != NULL)
         queue->tail->next = new_node;
-    }
 
     queue->tail = new_node;
-    if (queue->head == NULL) {
+    if (queue->head == NULL)
         queue->head = new_node;
-    }
 
     queue->count += 1;
 }
@@ -90,13 +95,11 @@ queue_push(queue_t *queue, void *value) {
 queue_t *
 new_queue() {
     queue_t *queue = xmalloc(sizeof(queue_t));
-    pthread_mutex_t lock;
-    if (pthread_mutex_init(&lock, NULL) != 0) {
+    if (pthread_mutex_init(&queue->lock, NULL) != 0) {
         free(queue);
         return NULL;
     }
 
-    queue->lock = lock;
     queue->head = NULL;
     queue->tail = NULL;
     queue->count = 0;
@@ -108,6 +111,17 @@ void
 destroy_queue(queue_t *queue) {
     if (queue == NULL)
         return;
+
+    /* Drain remaining nodes (values are owned by caller) */
+    pthread_mutex_lock(&queue->lock);
+    queue_node_t *n = queue->head;
+    while (n != NULL) {
+        queue_node_t *next = n->next;
+        free(n);
+        n = next;
+    }
+    pthread_mutex_unlock(&queue->lock);
+
     pthread_mutex_destroy(&queue->lock);
     free(queue);
 }
