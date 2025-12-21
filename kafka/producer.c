@@ -78,16 +78,10 @@ new_producer_poller(rd_kafka_t *rd_producer) {
     poller->rd_producer = rd_producer;
     poller->should_stop = 0;
 
-    pthread_mutex_init(&poller->lock, NULL);
-    pthread_attr_init(&poller->attr);
-    pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE);
-    int rc = pthread_create(&poller->thread, &poller->attr, producer_poll_loop, (void *)poller);
-    if (rc != 0) {
-        pthread_attr_destroy(&poller->attr);
-        pthread_mutex_destroy(&poller->lock);
-        free(poller);
-        return NULL;
-    }
+    XPTHREAD(pthread_mutex_init(&poller->lock, NULL));
+    XPTHREAD(pthread_attr_init(&poller->attr));
+    XPTHREAD(pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE));
+    XPTHREAD(pthread_create(&poller->thread, &poller->attr, producer_poll_loop, (void *)poller));
 
     return poller;
 }
@@ -99,9 +93,8 @@ stop_poller(va_list args) {
 
     poller->should_stop = 1;
 
-    pthread_mutex_unlock(&poller->lock);
-
-    pthread_join(poller->thread, NULL);
+    XPTHREAD(pthread_mutex_unlock(&poller->lock));
+    XPTHREAD(pthread_join(poller->thread, NULL));
 
     return 0;
 }
@@ -111,8 +104,8 @@ destroy_producer_poller(producer_poller_t *poller) {
     // stopping polling thread
     coio_call(stop_poller, poller);
 
-    pthread_attr_destroy(&poller->attr);
-    pthread_mutex_destroy(&poller->lock);
+    XPTHREAD(pthread_attr_destroy(&poller->attr));
+    XPTHREAD(pthread_mutex_destroy(&poller->lock));
 
     free(poller);
 }
@@ -281,11 +274,7 @@ lua_producer_produce(struct lua_State *L) {
     lua_pushliteral(L, "headers");
     lua_gettable(L, -2);
     if (lua_istable(L, -1)) {
-        hdrs = rd_kafka_headers_new(8);
-        if (hdrs == NULL) {
-            lua_pushliteral(L, "failed to allocate kafka headers");
-            return 1;
-        }
+        hdrs = xrd_kafka_headers_new(8);
 
         lua_pushnil(L);
         while (lua_next(L, -2) != 0) {
@@ -475,7 +464,7 @@ lua_create_producer(struct lua_State *L) {
 
     char errstr[512];
 
-    rd_kafka_topic_conf_t *topic_conf = rd_kafka_topic_conf_new();
+    rd_kafka_topic_conf_t *topic_conf = xrd_kafka_topic_conf_new();
     lua_pushstring(L, "default_topic_options");
     lua_gettable(L, -2);
     if (lua_istable(L, -1)) {
@@ -505,7 +494,7 @@ lua_create_producer(struct lua_State *L) {
     }
     lua_pop(L, 1);
 
-    rd_kafka_conf_t *rd_config = rd_kafka_conf_new();
+    rd_kafka_conf_t *rd_config = xrd_kafka_conf_new();
     rd_kafka_conf_set_default_topic_conf(rd_config, topic_conf);
 
     event_queues_t *event_queues = new_event_queues();

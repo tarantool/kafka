@@ -109,16 +109,10 @@ new_consumer_poller(rd_kafka_t *rd_consumer) {
     poller->rd_consumer = rd_consumer;
     poller->should_stop = 0;
 
-    pthread_mutex_init(&poller->lock, NULL);
-    pthread_attr_init(&poller->attr);
-    pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE);
-    int rc = pthread_create(&poller->thread, &poller->attr, consumer_poll_loop, (void *)poller);
-    if (rc != 0) {
-        pthread_attr_destroy(&poller->attr);
-        pthread_mutex_destroy(&poller->lock);
-        free(poller);
-        return NULL;
-    }
+    XPTHREAD(pthread_mutex_init(&poller->lock, NULL));
+    XPTHREAD(pthread_attr_init(&poller->attr));
+    XPTHREAD(pthread_attr_setdetachstate(&poller->attr, PTHREAD_CREATE_JOINABLE));
+    XPTHREAD(pthread_create(&poller->thread, &poller->attr, consumer_poll_loop, (void *)poller));
 
     return poller;
 }
@@ -130,9 +124,8 @@ stop_poller(va_list args) {
 
     poller->should_stop = 1;
 
-    pthread_mutex_unlock(&poller->lock);
-
-    pthread_join(poller->thread, NULL);
+    XPTHREAD(pthread_mutex_unlock(&poller->lock));
+    XPTHREAD(pthread_join(poller->thread, NULL));
 
     return 0;
 }
@@ -150,8 +143,8 @@ destroy_consumer_poller(consumer_poller_t *poller) {
     if (poller == NULL)
         return;
 
-    pthread_attr_destroy(&poller->attr);
-    pthread_mutex_destroy(&poller->lock);
+    XPTHREAD(pthread_attr_destroy(&poller->attr));
+    XPTHREAD(pthread_mutex_destroy(&poller->lock));
     free(poller);
 }
 
@@ -175,7 +168,7 @@ lua_consumer_subscribe(struct lua_State *L) {
     consumer_t *consumer = lua_check_consumer(L, 1);
 
     if (consumer->topics == NULL) {
-        consumer->topics = rd_kafka_topic_partition_list_new(lua_objlen(L, 2));
+        consumer->topics = xrd_kafka_topic_partition_list_new(lua_objlen(L, 2));
     }
 
     lua_pushnil(L);
@@ -431,11 +424,7 @@ lua_consumer_store_offset(struct lua_State *L) {
     consumer_t *consumer = lua_check_consumer(L, 1);
     const msg_t *msg = lua_check_consumer_msg(L, 2);
 
-    rd_kafka_topic_partition_list_t *offsets = rd_kafka_topic_partition_list_new(1);
-    if (offsets == NULL) {
-        lua_pushliteral(L, "Out of memory: failed to allocate topic_partition_list");
-        return 1;
-    }
+    rd_kafka_topic_partition_list_t *offsets = xrd_kafka_topic_partition_list_new(1);
 
     /* rd_kafka_offsets_store() stores what you pass (no +1),
      * while rd_kafka_offset_store() historically did +1 internally. */
@@ -486,9 +475,7 @@ lua_consumer_seek_partitions(struct lua_State *L) {
     int timeout_ms = luaL_checkint(L, 3);
 
     size_t len = lua_objlen(L, 2);
-    rd_kafka_topic_partition_list_t *list = rd_kafka_topic_partition_list_new(len);
-    if (list == NULL)
-        luaL_error(L, "Out of memory: failed to allocate rd_kafka_topic_partition_list_t");
+    rd_kafka_topic_partition_list_t *list = xrd_kafka_topic_partition_list_new(len);
 
     for (size_t i = 1; i <= len; i++) {
         luaL_pushint64(L, i);
@@ -662,7 +649,7 @@ lua_create_consumer(struct lua_State *L) {
 
     char errstr[512];
 
-    rd_kafka_topic_conf_t *topic_conf = rd_kafka_topic_conf_new();
+    rd_kafka_topic_conf_t *topic_conf = xrd_kafka_topic_conf_new();
     lua_pushstring(L, "default_topic_options");
     lua_gettable(L, -2);
     if (lua_istable(L, -1)) {
@@ -692,7 +679,7 @@ lua_create_consumer(struct lua_State *L) {
     }
     lua_pop(L, 1);
 
-    rd_kafka_conf_t *rd_config = rd_kafka_conf_new();
+    rd_kafka_conf_t *rd_config = xrd_kafka_conf_new();
     rd_kafka_conf_set_default_topic_conf(rd_config, topic_conf);
 
     event_queues_t *event_queues = new_event_queues();
@@ -908,9 +895,7 @@ lua_consumer_offsets_for_times(struct lua_State *L) {
     int timeout_ms = luaL_checkint(L, 3);
 
     size_t len = lua_objlen(L, 2);
-    rd_kafka_topic_partition_list_t *list = rd_kafka_topic_partition_list_new(len);
-    if (list == NULL)
-        luaL_error(L, "Out of memory: failed to allocate rd_kafka_topic_partition_list_t");
+    rd_kafka_topic_partition_list_t *list = xrd_kafka_topic_partition_list_new(len);
 
     // input: { {topic, partition, ts_ms}, ... }
     for (size_t i = 1; i <= len; i++) {

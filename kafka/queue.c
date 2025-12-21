@@ -95,10 +95,7 @@ queue_push(queue_t *queue, void *value) {
 queue_t *
 new_queue() {
     queue_t *queue = xmalloc(sizeof(queue_t));
-    if (pthread_mutex_init(&queue->lock, NULL) != 0) {
-        free(queue);
-        return NULL;
-    }
+    XPTHREAD(pthread_mutex_init(&queue->lock, NULL));
 
     queue->head = NULL;
     queue->tail = NULL;
@@ -122,6 +119,6 @@ destroy_queue(queue_t *queue) {
     }
     pthread_mutex_unlock(&queue->lock);
 
-    pthread_mutex_destroy(&queue->lock);
+    XPTHREAD(pthread_mutex_destroy(&queue->lock));
     free(queue);
 }

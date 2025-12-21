@@ -8,6 +8,7 @@
 #include <librdkafka/rdkafka.h>
 
 #include <pthread.h>
+#include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
 
@@ -52,6 +53,22 @@
 #define xmalloc(size)           xalloc_impl((size), malloc, (size))
 #define xcalloc(n, size)        xalloc_impl((n) * (size), calloc, (n), (size))
 #define xrealloc(ptr, size)     xalloc_impl((size), realloc, (ptr), (size))
+#define xrd_kafka_topic_partition_list_new(size) xalloc_impl((size), rd_kafka_topic_partition_list_new, (size))
+#define xrd_kafka_headers_new(size) xalloc_impl((size), rd_kafka_headers_new, (size))
+#define xrd_kafka_topic_conf_new() xalloc_impl(1, rd_kafka_topic_conf_new)
+#define xrd_kafka_conf_new() xalloc_impl(1, rd_kafka_conf_new)
+
+static inline void xpthread_fail(const char *what, int rc, const char *file, int line) {
+    fprintf(stderr, "%s failed (rc=%d: %s) at %s:%d\n",
+            what, rc, strerror(rc), file, line);
+    exit(EXIT_FAILURE);
+}
+
+#define XPTHREAD(call) do {                            \
+    int _rc = (call);                                  \
+    if (unlikely(_rc != 0))                            \
+        xpthread_fail(#call, _rc, __FILE__, __LINE__); \
+} while (0)
 
 extern const char* const consumer_label;
 extern const char* const consumer_msg_label;

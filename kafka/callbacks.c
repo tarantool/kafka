@@ -161,16 +161,8 @@ msg_delivery_callback(rd_kafka_t *UNUSED(producer), const rd_kafka_message_t *ms
 rebalance_msg_t *
 new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
     rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    if (pthread_mutex_init(&msg->lock, NULL) != 0) {
-        free(msg);
-        return NULL;
-    }
-
-    if (pthread_cond_init(&msg->sync, NULL) != 0) {
-        pthread_mutex_destroy(&msg->lock);
-        free(msg);
-        return NULL;
-    }
+    XPTHREAD(pthread_mutex_init(&msg->lock, NULL));
+    XPTHREAD(pthread_cond_init(&msg->sync, NULL));
 
     msg->revoked = revoked;
     msg->assigned = NULL;
@@ -181,16 +173,8 @@ new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
 rebalance_msg_t *
 new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
     rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    if (pthread_mutex_init(&msg->lock, NULL) != 0) {
-        free(msg);
-        return NULL;
-    }
-
-    if (pthread_cond_init(&msg->sync, NULL) != 0) {
-        pthread_mutex_destroy(&msg->lock);
-        free(msg);
-        return NULL;
-    }
+    XPTHREAD(pthread_mutex_init(&msg->lock, NULL));
+    XPTHREAD(pthread_cond_init(&msg->sync, NULL));
 
     msg->revoked = NULL;
     msg->assigned = assigned;
@@ -201,16 +185,8 @@ new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
 rebalance_msg_t *
 new_rebalance_error_msg(rd_kafka_resp_err_t err) {
     rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    if (pthread_mutex_init(&msg->lock, NULL) != 0) {
-        free(msg);
-        return NULL;
-    }
-
-    if (pthread_cond_init(&msg->sync, NULL) != 0) {
-        pthread_mutex_destroy(&msg->lock);
-        free(msg);
-        return NULL;
-    }
+    XPTHREAD(pthread_mutex_init(&msg->lock, NULL));
+    XPTHREAD(pthread_cond_init(&msg->sync, NULL));
 
     msg->revoked = NULL;
     msg->assigned = NULL;
@@ -220,8 +196,8 @@ new_rebalance_error_msg(rd_kafka_resp_err_t err) {
 
 void
 destroy_rebalance_msg(rebalance_msg_t *rebalance_msg) {
-    pthread_mutex_destroy(&rebalance_msg->lock);
-    pthread_cond_destroy(&rebalance_msg->sync);
+    XPTHREAD(pthread_mutex_destroy(&rebalance_msg->lock));
+    XPTHREAD(pthread_cond_destroy(&rebalance_msg->sync));
     free(rebalance_msg);
 }
 
