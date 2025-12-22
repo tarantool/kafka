@@ -1,0 +1,17 @@
+diff --git a/src/rdrand.c b/src/rdrand.c
+index 77d02cfc..ad388e2a 100644
+--- a/src/rdrand.c
++++ b/src/rdrand.c
+@@ -32,10 +32,12 @@
+ #include "tinycthread.h"
+ #include "rdmurmur2.h"
+ #ifndef _WIN32
++#ifdef HAVE_GETENTROPY
+ /* getentropy() can be present in one of these two */
+ #include <unistd.h>
+ #include <sys/random.h>
+ #endif
++#endif
+ 
+ #ifdef HAVE_OSSL_SECURE_RAND_BYTES
+ #include <openssl/rand.h>
