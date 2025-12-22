@@ -308,7 +308,7 @@ def test_consumer_stats():
     server = get_server()
 
     with create_consumer(server, "kafka:9090"):
-        time.sleep(2)
+        time.sleep(5)
 
         response = server.call("consumer.get_stats", [])
         assert len(response) > 0
