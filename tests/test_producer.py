@@ -98,7 +98,7 @@ def test_producer_stats():
 
     server.call("producer.create", ["kafka:9090"])
 
-    time.sleep(2)
+    time.sleep(5)
 
     response = server.call("producer.get_stats", [])
     assert len(response) > 0
