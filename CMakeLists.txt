@@ -83,6 +83,7 @@ if(STATIC_BUILD)
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-71.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-72.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-94.patch"
+        COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-fix-ubsan.patch"
     )
 
     add_library(librdkafka_static INTERFACE)

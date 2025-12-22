@@ -117,7 +117,7 @@ lua_consumer_msg_tostring(struct lua_State *L) {
     }
 
     lua_pushfstring(L,
-                    "Kafka Consumer Message: topic=%s partition=%d offset=%lld key=%s value=%s",
+                    "Kafka Consumer Message: topic=%s partition=%d offset=%d key=%s value=%s",
                     msg->topic_name,
                     msg->partition,
                     msg->offset,
