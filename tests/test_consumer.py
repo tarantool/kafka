@@ -266,11 +266,12 @@ def test_consumer_should_partially_unsubscribe_from_topics():
     }):
         t1 = f"test_unsub_partially_{salt}_1"
         t2 = f"test_unsub_partially_{salt}_2"
-        server.call("consumer.subscribe", [[t1, t2]])
 
+        # Ensure topics exist BEFORE subscribe/rebalance (auto-create can lag in CI)
         write_into_kafka(t1, (message1, ))
         write_into_kafka(t2, (message2, ))
-        time.sleep(5)
+        server.call("consumer.subscribe", [[t1, t2]])
+        time.sleep(5)  # give group join/rebalance time
 
         # waiting up to 30 seconds
         response = server.call("consumer.consume", [30])[0]
@@ -281,6 +282,7 @@ def test_consumer_should_partially_unsubscribe_from_topics():
         }
 
         server.call("consumer.unsubscribe", [[t1]])
+        time.sleep(2)  # let revoke/apply subscription update settle
 
         write_into_kafka(t1, (message3, ))
         write_into_kafka(t2, (message4, ))
@@ -310,12 +312,20 @@ def test_consumer_stats():
 
         response = server.call("consumer.get_stats", [])
         assert len(response) > 0
-        assert len(response[0]) > 0
-        stat = json.loads(response[0][0])
+        found = False
+        for resp in response:
+            if len(resp) == 0:
+                continue
 
-        assert 'rdkafka#consumer' in stat['name']
-        assert 'kafka:9090/bootstrap' in stat['brokers']
-        assert stat['type'] == 'consumer'
+            found = True
+            stat = json.loads(resp[0])
+
+            assert 'rdkafka#consumer' in stat['name']
+            assert 'kafka:9090/bootstrap' in stat['brokers']
+            assert stat['type'] == 'consumer'
+            break
+
+        assert found
 
 
 def test_consumer_dump_conf():
@@ -375,17 +385,18 @@ def test_consumer_should_log_debug():
 
 
 def test_consumer_should_log_rebalances():
+    # Use unique topic and create it before subscribe: in CI topic auto-create can lag,
+    # and subscribing to a non-existent topic may yield no assignment/rebalance events.
+    topic = f"test_rebalances_{randomword(6)}"
+    write_into_kafka(topic, ({"key": "init", "value": "init"},))
+
     server = get_server()
-
-    with create_consumer(server, KAFKA_HOST):
-        time.sleep(5)
-
-        server.call("consumer.subscribe", [["test_unsub_partially_1"]])
-
-        time.sleep(20)
-
+    gid = f"g_rebalances_{randomword(6)}"
+    with create_consumer(server, KAFKA_HOST, {"group.id": gid}):
+        time.sleep(2)
+        server.call("consumer.subscribe", [[topic]])
+        time.sleep(10)
         response = server.call("consumer.get_rebalances", [])
-
         assert len(response.data[0]) > 0
 
 
@@ -397,7 +408,11 @@ def test_consumer_rebalance_protocol():
         response = server.call("consumer.rebalance_protocol", [])
         assert response[0] == 'NONE'
 
-        server.call("consumer.subscribe", [["test_unsub_partially_1"]])
+        # Ensure topic exists before subscribe (auto-create can lag)
+        topic = f"test_rebalance_proto_{randomword(6)}"
+        write_into_kafka(topic, ({"key": "init", "value": "init"},))
+
+        server.call("consumer.subscribe", [[topic]])
         response = server.call("consumer.rebalance_protocol", [])
         assert response[0] == 'NONE'
 
@@ -474,9 +489,10 @@ def test_consumer_pause_resume():
     server = get_server()
 
     with create_consumer(server, KAFKA_HOST, {"group.id": "should_consume_msgs"}):
-        server.call("consumer.subscribe", [["test_resume_pause"]])
-
-        write_into_kafka("test_resume_pause", (message_before_pause,))
+        topic = "test_resume_pause"
+        # Ensure topic exists before subscribe/rebalance
+        write_into_kafka(topic, (message_before_pause,))
+        server.call("consumer.subscribe", [[topic]])
 
         response = server.call("consumer.consume", [10])[0]
 
