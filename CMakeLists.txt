@@ -72,6 +72,7 @@ if(STATIC_BUILD)
             --disable-zstd
             --disable-lz4
             --disable-lz4-ext
+            --disable-curl
             --enable-static
         BUILD_COMMAND make -C src -j
         INSTALL_COMMAND make -C src install
