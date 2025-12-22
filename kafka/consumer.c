@@ -277,82 +277,50 @@ LUA_RDKAFKA_POLL_FUNC(consumer, poll_stats, STATS_QUEUE, free, push_stats_cb_arg
 LUA_RDKAFKA_POLL_FUNC(consumer, poll_errors, ERROR_QUEUE, destroy_error_msg, push_errors_cb_args)
 
 static int
-lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, rebalance_msg_t *msg) {
+lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, const rebalance_msg_t *msg) {
     rd_kafka_topic_partition_t *tp = NULL;
-    // creating main table
-    lua_createtable(L, 0, 3); // main table
-    if (msg->assigned != NULL) {
-        lua_pushstring(L, "assigned"); //  "assigned" > main table
-        // creating table for assigned topics
-        lua_createtable(L, 0, 10);  //  table with topics > "assigned" > main table
 
-        for (int i = 0; i < msg->assigned->cnt; i++) {
-            tp = &msg->assigned->elems[i];
+    lua_createtable(L, 0, 1); // main table
 
-            lua_pushstring(L, tp->topic); //  topic name > table with topics > "assigned" > main table
+    if (msg->kind == REB_EVENT_ERROR) {
+        lua_pushstring(L, "error");
+        lua_pushstring(L, rd_kafka_err2str(msg->err));
+        lua_settable(L, -3);
+        return 0;
+    }
 
-            // get value from table
-            lua_pushstring(L, tp->topic); //  topic name > topic name > table with topics > "assigned" > main table
-            lua_gettable(L, -3); // table with partitions or nil > topic name > table with topics > "assigned" > main table
+    const char *top_key = (msg->kind == REB_EVENT_ASSIGN) ? "assigned" : "revoked";
+    lua_pushstring(L, top_key);
+    lua_createtable(L, 0, 10); // topics table
 
-            if (lua_isnil(L, -1) == 1) {
-                // removing nil from top of stack
-                lua_pop(L, 1); // topic name > table with topics > "assigned" > main table
-                // creating table for assigned partitions on topic
-                lua_createtable(L, 0, 10); // table with partitions > topic name > table with topics > "assigned" > main table
-            }
+    rd_kafka_topic_partition_list_t *lst = msg->partitions;
+    if (lst == NULL) {
+        /* пустой список — ок */
+        lua_settable(L, -3); // main[top_key] = {}
+        return 0;
+    }
 
-            // add partition to table
-            lua_pushinteger(L, tp->partition);  // key > table with partitions > topic name > table with topics > "assigned" > main table
-            luaL_pushint64(L, tp->offset);  // value > key > table with partitions > topic name > table with topics > "assigned" > main table
-            lua_settable(L, -3);  // table with partitions > topic name > table with topics > "assigned" > main table
+    for (int i = 0; i < lst->cnt; i++) {
+        tp = &lst->elems[i];
 
-            // add table with partitions to table with topics
-            lua_settable(L, -3);  // table with topics > "assigned" > main table
+        lua_pushstring(L, tp->topic);
+
+        lua_pushstring(L, tp->topic);
+        lua_gettable(L, -3);  // topics[topic] -> table or nil
+
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            lua_createtable(L, 0, 10); // partitions table
         }
 
-        lua_settable(L, -3);  // main table
+        lua_pushinteger(L, tp->partition);
+        luaL_pushint64(L, tp->offset);
+        lua_settable(L, -3); // partitions[partition] = offset
+
+        lua_settable(L, -3); // topics[topic] = partitions_table
     }
-    else if (msg->revoked != NULL) {
-        lua_pushstring(L, "revoked"); //  "revoked" > main table
-        // creating table for revoked topics
-        lua_createtable(L, 0, 10);  //  table with topics > "revoked" > main table
 
-        for (int i = 0; i < msg->revoked->cnt; i++) {
-            tp = &msg->revoked->elems[i];
-
-            lua_pushstring(L, tp->topic); //  topic name > table with topics > "revoked" > main table
-
-            // get value from table
-            lua_pushstring(L, tp->topic); //  topic name > topic name > table with topics > "revoked" > main table
-            lua_gettable(L, -3); // table with partitions or nil > topic name > table with topics > "revoked" > main table
-
-            if (lua_isnil(L, -1) == 1) {
-                // removing nil from top of stack
-                lua_pop(L, 1); // topic name > table with topics > "revoked" > main table
-                // creating table for revoked partitions on topic
-                lua_createtable(L, 0, 10); // table with partitions > topic name > table with topics > "revoked" > main table
-            }
-
-            // add partition to table
-            lua_pushinteger(L, tp->partition);  // key > table with partitions > topic name > table with topics > "revoked" > main table
-            luaL_pushint64(L, tp->offset);  // value > key > table with partitions > topic name > table with topics > "revoked" > main table
-            lua_settable(L, -3);  // table with partitions > topic name > table with topics > "revoked" > main table
-
-            // add table with partitions to table with topics
-            lua_settable(L, -3);  // table with topics > "revoked" > main table
-        }
-
-        lua_settable(L, -3);  // main table
-    }
-    else if (msg->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-        lua_pushstring(L, "error");  //  "error" > main table
-        lua_pushstring(L, rd_kafka_err2str(msg->err));  // msg > "error" > main table
-        lua_settable(L, -3);  // main table
-    }
-    else {
-        return -1;
-    }
+    lua_settable(L, -3); // main[top_key] = topics_table
     return 0;
 }
 
@@ -371,49 +339,35 @@ lua_consumer_poll_rebalances(struct lua_State *L) {
     }
 
     int limit = lua_tonumber(L, 2);
-    rebalance_msg_t *msg = NULL;
     int count = 0;
-    char *err_str = NULL;
 
     while (count < limit) {
-        msg = queue_pop(consumer->event_queues->queues[REBALANCE_QUEUE]);
-        if (msg == NULL) {
+        rebalance_msg_t *msg = queue_pop(consumer->event_queues->queues[REBALANCE_QUEUE]);
+        if (msg == NULL)
             break;
-        }
         count++;
 
-        pthread_mutex_lock(&msg->lock);
-
-        // push callback on stack
         lua_rawgeti(L, LUA_REGISTRYINDEX, consumer->event_queues->cb_refs[REBALANCE_QUEUE]);
 
-        // push rebalance args on stack
-        if (lua_prepare_rebalance_callback_args_on_stack(L, msg) == 0) {
-            /* do the call (1 arguments, 0 result) */
-            if (lua_pcall(L, 1, 0, 0) != 0) {
-                err_str = (char *)lua_tostring(L, -1);
-            }
-        } else {
-            err_str = "unknown error on rebalance callback args processing";
+        if (lua_prepare_rebalance_callback_args_on_stack(L, msg) != 0) {
+            destroy_rebalance_msg(msg);
+            lua_pushinteger(L, count);
+            lua_pushliteral(L, "unknown error on rebalance callback args processing");
+            return 2;
         }
 
-        // allowing background thread proceed rebalancing
-        pthread_cond_signal(&msg->sync);
+        int rc = lua_pcall(L, 1, 0, 0);
+        destroy_rebalance_msg(msg);
 
-        pthread_mutex_unlock(&msg->lock);
-
-        if (err_str != NULL) {
-            break;
+        if (rc != 0) {
+            lua_pushinteger(L, count);
+            lua_insert(L, -2);
+            return 2;
         }
     }
 
-    lua_pushnumber(L, (double)count);
-    if (err_str != NULL) {
-        lua_pushstring(L, err_str);
-    } else {
-        lua_pushnil(L);
-    }
-    return 2;
+    lua_pushinteger(L, count);
+    return 1;
 }
 
 int

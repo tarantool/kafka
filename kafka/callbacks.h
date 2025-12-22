@@ -66,7 +66,7 @@ void
 destroy_error_msg(error_msg_t *msg);
 
 void
-error_callback(rd_kafka_t *UNUSED(rd_kafka), int err, const char *reason, void *opaque);
+error_callback(rd_kafka_t *rd_kafka, int err, const char *reason, void *opaque);
 
 int
 push_errors_cb_args(struct lua_State *L, const error_msg_t *msg);
@@ -87,26 +87,28 @@ void
 destroy_dr_msg(dr_msg_t *dr_msg);
 
 void
-msg_delivery_callback(rd_kafka_t *UNUSED(producer), const rd_kafka_message_t *msg, void *opaque);
+msg_delivery_callback(rd_kafka_t *producer, const rd_kafka_message_t *msg, void *opaque);
 
 
 /**
  * Handle rebalance callbacks from RDKafka
  */
 
+typedef enum {
+    REB_EVENT_ASSIGN,
+    REB_EVENT_REVOKE,
+    REB_EVENT_ERROR,
+} rebalance_event_kind_t;
+
 typedef struct {
-    pthread_mutex_t                  lock;
-    pthread_cond_t                   sync;
-    rd_kafka_topic_partition_list_t *revoked;
-    rd_kafka_topic_partition_list_t *assigned;
-    rd_kafka_resp_err_t              err;
+    rebalance_event_kind_t kind;
+    rd_kafka_topic_partition_list_t *partitions;
+    rd_kafka_resp_err_t err;
 } rebalance_msg_t;
 
-rebalance_msg_t *new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked);
-
-rebalance_msg_t *new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned);
-
-rebalance_msg_t *new_rebalance_error_msg(rd_kafka_resp_err_t err);
+rebalance_msg_t *new_rebalance_msg(rebalance_event_kind_t kind,
+                                   const rd_kafka_topic_partition_list_t *partitions,
+                                   rd_kafka_resp_err_t err);
 
 void destroy_rebalance_msg(rebalance_msg_t *rebalance_msg);
 
@@ -151,7 +153,6 @@ lua_##rd_type##_##name(struct lua_State *L) {                                   
     int limit = lua_tonumber(L, 2);                                                      \
     void *msg = NULL;                                                                    \
     int count = 0;                                                                       \
-    char *err_str = NULL;                                                                \
     while (count < limit) {                                                              \
         msg = queue_pop(rd->event_queues->queues[queue_no]);                             \
         if (msg == NULL)                                                                 \
@@ -160,20 +161,17 @@ lua_##rd_type##_##name(struct lua_State *L) {                                   
         count++;                                                                         \
         lua_rawgeti(L, LUA_REGISTRYINDEX, rd->event_queues->cb_refs[queue_no]);          \
         int args_count = push_args_fn(L, msg);                                           \
-        if (lua_pcall(L, args_count, 0, 0) != 0) /* call (N arguments, 0 result) */      \
-            err_str = (char *)lua_tostring(L, -1);                                       \
+        int rc = lua_pcall(L, args_count, 0, 0);  /* call (N arguments, 0 result) */     \
         destroy_fn(msg);                                                                 \
-                                                                                         \
-        if (err_str != NULL)                                                             \
-            break;                                                                       \
+        if (rc != 0) {                                                                   \
+            lua_pushinteger(L, count);                                                   \
+            lua_insert(L, -2);                                                           \
+            return 2;                                                                    \
+        }                                                                                \
     }                                                                                    \
-    lua_pushinteger(L, count);                                                           \
-    if (err_str != NULL)                                                                 \
-        lua_pushstring(L, err_str);                                                      \
-    else                                                                                 \
-        lua_pushnil(L);                                                                  \
                                                                                          \
-    return 2;                                                                            \
+    lua_pushinteger(L, count);                                                           \
+    return 1;                                                                            \
 }
 
 typedef struct {

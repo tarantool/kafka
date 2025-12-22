@@ -146,7 +146,7 @@ new_consumer_msg(const rd_kafka_message_t *rd_message) {
 
     size_t topic_name_len = strlen(topic_name);
     size_t message_size = sizeof(msg_t) + rd_message->len + rd_message->key_len + topic_name_len + 1;
-    msg_t *msg = xcalloc(message_size, 1);
+    msg_t *msg = xcalloc(1, message_size);
     msg->partition = rd_message->partition;
     msg->value = (char*)msg + sizeof(msg_t);
     msg->key = (char*)msg + sizeof(msg_t) + rd_message->len;
@@ -170,7 +170,7 @@ new_consumer_msg(const rd_kafka_message_t *rd_message) {
     msg->offset = rd_message->offset;
 
     // topic name
-    strncpy(msg->topic_name, topic_name, topic_name_len + 1);
+    memcpy(msg->topic_name, topic_name, topic_name_len + 1);
 
     return msg;
 }

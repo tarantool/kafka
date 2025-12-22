@@ -11,29 +11,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
-
-#ifdef UNUSED
-#elif defined(__GNUC__)
-# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
-#elif defined(__LCLINT__)
-# define UNUSED(x) /*@unused@*/ x
-#else
-# define UNUSED(x) x
-#endif
-
-/**
- * You may use likely()/unlikely() to provide the compiler with branch
- * prediction information.
- *
- * @sa https://en.cppreference.com/w/cpp/language/attributes/likely
- */
-#if __has_builtin(__builtin_expect) || defined(__GNUC__)
-# define likely(x)    __builtin_expect(!! (x),1)
-# define unlikely(x)  __builtin_expect(!! (x),0)
-#else
-# define likely(x)    (x)
-# define unlikely(x)  (x)
-#endif
+#include <stdio.h>
 
 /**
  * An x* variant of a memory allocation function calls the original function

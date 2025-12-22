@@ -90,7 +90,8 @@ destroy_error_msg(error_msg_t *msg) {
 }
 
 void
-error_callback(rd_kafka_t *UNUSED(rd_kafka), int err, const char *reason, void *opaque) {
+error_callback(rd_kafka_t *rd_kafka, int err, const char *reason, void *opaque) {
+    (void)rd_kafka;
     event_queues_t *event_queues = opaque;
     if (event_queues != NULL && event_queues->queues[ERROR_QUEUE] != NULL) {
         error_msg_t *msg = new_error_msg(err, reason);
@@ -100,8 +101,7 @@ error_callback(rd_kafka_t *UNUSED(rd_kafka), int err, const char *reason, void *
 }
 
 int
-push_log_cb_args(struct lua_State *L, const log_msg_t *msg)
-{
+push_log_cb_args(struct lua_State *L, const log_msg_t *msg) {
     lua_pushstring(L, msg->fac);
     lua_pushstring(L, msg->buf);
     lua_pushinteger(L, msg->level);
@@ -109,15 +109,13 @@ push_log_cb_args(struct lua_State *L, const log_msg_t *msg)
 }
 
 int
-push_stats_cb_args(struct lua_State *L, const char *msg)
-{
+push_stats_cb_args(struct lua_State *L, const char *msg) {
     lua_pushstring(L, msg);
     return 1;
 }
 
 int
-push_errors_cb_args(struct lua_State *L, const error_msg_t *msg)
-{
+push_errors_cb_args(struct lua_State *L, const error_msg_t *msg) {
     lua_pushstring(L, msg->reason);
     return 1;
 }
@@ -141,16 +139,18 @@ destroy_dr_msg(dr_msg_t *dr_msg) {
 }
 
 void
-msg_delivery_callback(rd_kafka_t *UNUSED(producer), const rd_kafka_message_t *msg, void *opaque) {
+msg_delivery_callback(rd_kafka_t *producer, const rd_kafka_message_t *msg, void *opaque) {
+    (void)producer;
     event_queues_t *event_queues = opaque;
-    if (msg->_private != NULL && event_queues != NULL && event_queues->delivery_queue != NULL) {
-        dr_msg_t *dr_msg = msg->_private;
-        if (dr_msg != NULL) {
-            if (msg->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
-                dr_msg->err = msg->err;
-            }
-            queue_push(event_queues->delivery_queue, dr_msg);
+    if (msg->_private == NULL || event_queues == NULL || event_queues->delivery_queue == NULL)
+        return;
+
+    dr_msg_t *dr_msg = msg->_private;
+    if (dr_msg != NULL) {
+        if (msg->err != RD_KAFKA_RESP_ERR_NO_ERROR) {
+            dr_msg->err = msg->err;
         }
+        queue_push(event_queues->delivery_queue, dr_msg);
     }
 }
 
@@ -159,110 +159,81 @@ msg_delivery_callback(rd_kafka_t *UNUSED(producer), const rd_kafka_message_t *ms
  */
 
 rebalance_msg_t *
-new_rebalance_revoke_msg(rd_kafka_topic_partition_list_t *revoked) {
-    rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    XPTHREAD(pthread_mutex_init(&msg->lock, NULL));
-    XPTHREAD(pthread_cond_init(&msg->sync, NULL));
-
-    msg->revoked = revoked;
-    msg->assigned = NULL;
-    msg->err = RD_KAFKA_RESP_ERR_NO_ERROR;
-    return msg;
-}
-
-rebalance_msg_t *
-new_rebalance_assign_msg(rd_kafka_topic_partition_list_t *assigned) {
-    rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    XPTHREAD(pthread_mutex_init(&msg->lock, NULL));
-    XPTHREAD(pthread_cond_init(&msg->sync, NULL));
-
-    msg->revoked = NULL;
-    msg->assigned = assigned;
-    msg->err = RD_KAFKA_RESP_ERR_NO_ERROR;
-    return msg;
-}
-
-rebalance_msg_t *
-new_rebalance_error_msg(rd_kafka_resp_err_t err) {
-    rebalance_msg_t *msg = xmalloc(sizeof(rebalance_msg_t));
-    XPTHREAD(pthread_mutex_init(&msg->lock, NULL));
-    XPTHREAD(pthread_cond_init(&msg->sync, NULL));
-
-    msg->revoked = NULL;
-    msg->assigned = NULL;
+new_rebalance_msg(rebalance_event_kind_t kind,
+                  const rd_kafka_topic_partition_list_t *partitions,
+                  rd_kafka_resp_err_t err) {
+    rebalance_msg_t *msg = xcalloc(1, sizeof(*msg));
+    msg->kind = kind;
     msg->err = err;
+
+    if (partitions != NULL) {
+        msg->partitions = rd_kafka_topic_partition_list_copy(partitions);
+    }
     return msg;
 }
 
 void
-destroy_rebalance_msg(rebalance_msg_t *rebalance_msg) {
-    XPTHREAD(pthread_mutex_destroy(&rebalance_msg->lock));
-    XPTHREAD(pthread_cond_destroy(&rebalance_msg->sync));
-    free(rebalance_msg);
+destroy_rebalance_msg(rebalance_msg_t *msg) {
+    if (msg == NULL)
+        return;
+    if (msg->partitions != NULL)
+        rd_kafka_topic_partition_list_destroy(msg->partitions);
+    free(msg);
+}
+
+static void
+push_rebalance_event_if_needed(event_queues_t *eq,
+                               rebalance_event_kind_t kind,
+                               const rd_kafka_topic_partition_list_t *partitions,
+                               rd_kafka_resp_err_t err) {
+    if (eq == NULL)
+        return;
+    if (eq->queues[REBALANCE_QUEUE] == NULL)
+        return;
+    if (eq->cb_refs[REBALANCE_QUEUE] == LUA_REFNIL)
+        return;
+
+    rebalance_msg_t *msg = new_rebalance_msg(kind, partitions, err);
+    if (msg == NULL)
+        return;
+
+    if (queue_push(eq->queues[REBALANCE_QUEUE], msg) != 0) {
+        destroy_rebalance_msg(msg);
+    }
 }
 
 void
-rebalance_callback(rd_kafka_t *consumer, rd_kafka_resp_err_t err, rd_kafka_topic_partition_list_t *partitions, void *opaque) {
-    event_queues_t *event_queues = opaque;
-    rebalance_msg_t *msg = NULL;
-    switch (err)
-    {
-        case RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS:
-            msg = new_rebalance_assign_msg(partitions);
-            if (msg != NULL) {
+rebalance_callback(rd_kafka_t *consumer,
+                   rd_kafka_resp_err_t err,
+                   rd_kafka_topic_partition_list_t *partitions,
+                   void *opaque)
+{
+    event_queues_t *eq = opaque;
+    const char *proto = rd_kafka_rebalance_protocol(consumer);
+    int cooperative = (proto != NULL) && strcmp(proto, "COOPERATIVE") == 0;
 
-                pthread_mutex_lock(&msg->lock);
-
-                if (queue_push(event_queues->queues[REBALANCE_QUEUE], msg) == 0) {
-                    // waiting while main TX thread invokes rebalance callback
-                    pthread_cond_wait(&msg->sync, &msg->lock);
-                }
-
-                pthread_mutex_unlock(&msg->lock);
-
-                destroy_rebalance_msg(msg);
-            }
+    switch (err) {
+    case RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS:
+        push_rebalance_event_if_needed(eq, REB_EVENT_ASSIGN, partitions, RD_KAFKA_RESP_ERR_NO_ERROR);
+        if (cooperative)
+            rd_kafka_incremental_assign(consumer, partitions);
+        else
             rd_kafka_assign(consumer, partitions);
-            break;
+        break;
 
-        case RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS:
-            rd_kafka_commit(consumer, partitions, 0); // sync commit
-
-            msg = new_rebalance_revoke_msg(partitions);
-            if (msg != NULL) {
-
-                pthread_mutex_lock(&msg->lock);
-
-                if (queue_push(event_queues->queues[REBALANCE_QUEUE], msg) == 0) {
-                    // waiting while main TX thread invokes rebalance callback
-                    pthread_cond_wait(&msg->sync, &msg->lock);
-                }
-
-                pthread_mutex_unlock(&msg->lock);
-
-                destroy_rebalance_msg(msg);
-            }
-
+    case RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS:
+        rd_kafka_commit(consumer, partitions, 0);
+        push_rebalance_event_if_needed(eq, REB_EVENT_REVOKE, partitions, RD_KAFKA_RESP_ERR_NO_ERROR);
+        if (cooperative)
+            rd_kafka_incremental_unassign(consumer, partitions);
+        else
             rd_kafka_assign(consumer, NULL);
-            break;
+        break;
 
-        default:
-            msg = new_rebalance_error_msg(err);
-            if (msg != NULL) {
-
-                pthread_mutex_lock(&msg->lock);
-
-                if (queue_push(event_queues->queues[REBALANCE_QUEUE], msg) == 0) {
-                    // waiting while main TX thread invokes rebalance callback
-                    pthread_cond_wait(&msg->sync, &msg->lock);
-                }
-
-                pthread_mutex_unlock(&msg->lock);
-
-                destroy_rebalance_msg(msg);
-            }
-            rd_kafka_assign(consumer, NULL);
-            break;
+    default:
+        push_rebalance_event_if_needed(eq, REB_EVENT_ERROR, NULL, err);
+        rd_kafka_assign(consumer, NULL);
+        break;
     }
 }
 
@@ -324,11 +295,7 @@ destroy_event_queues(struct lua_State *L, event_queues_t *event_queues) {
                     destroy_error_msg(msg);
                     break;
                 case REBALANCE_QUEUE: {
-                    rebalance_msg_t *rebalance_msg = msg;
-                    pthread_mutex_lock(&rebalance_msg->lock);
-                    // allowing background thread proceed rebalancing
-                    pthread_cond_signal(&rebalance_msg->sync);
-                    pthread_mutex_unlock(&rebalance_msg->lock);
+                    destroy_rebalance_msg(msg);
                     break;
                 }
             }

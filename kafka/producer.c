@@ -185,13 +185,10 @@ lua_producer_msg_delivery_poll(struct lua_State *L) {
 
     int events_limit = lua_tonumber(L, 2);
     int callbacks_count = 0;
-    char *err_str = NULL;
     dr_msg_t *dr_msg = NULL;
 
-    pthread_mutex_lock(&producer->event_queues->delivery_queue->lock);
-
     while (events_limit > callbacks_count) {
-        dr_msg = queue_lockfree_pop(producer->event_queues->delivery_queue);
+        dr_msg = queue_pop(producer->event_queues->delivery_queue);
         if (dr_msg == NULL)
             break;
         callbacks_count += 1;
@@ -202,25 +199,18 @@ lua_producer_msg_delivery_poll(struct lua_State *L) {
             lua_pushnil(L);
         }
         /* do the call (1 arguments, 0 result) */
-        if (lua_pcall(L, 1, 0, 0) != 0) {
-            err_str = (char *)lua_tostring(L, -1);
-        }
+        int rc = lua_pcall(L, 1, 0, 0);
         luaL_unref(L, LUA_REGISTRYINDEX, dr_msg->dr_callback);
         destroy_dr_msg(dr_msg);
-        if (err_str != NULL) {
-            break;
+        if (rc != 0) {
+            lua_pushinteger(L, callbacks_count);
+            lua_insert(L, -2); /* count below error string */
+            return 2;
         }
     }
 
-    pthread_mutex_unlock(&producer->event_queues->delivery_queue->lock);
-
-    lua_pushnumber(L, (double)callbacks_count);
-    if (err_str != NULL) {
-        lua_pushstring(L, err_str);
-    } else {
-        lua_pushnil(L);
-    }
-    return 2;
+    lua_pushinteger(L, callbacks_count);
+    return 1;
 }
 
 LUA_RDKAFKA_POLL_FUNC(producer, poll_logs, LOG_QUEUE, destroy_log_msg, push_log_cb_args)
