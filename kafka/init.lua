@@ -25,37 +25,42 @@ function Consumer.create(config)
     }
     setmetatable(new, Consumer)
 
-    new._poll_msg_fiber = fiber.create(function()
+    new._poll_msg_fiber = fiber.new(function()
         new:_poll_msg()
     end)
+    new._poll_msg_fiber:set_joinable(true)
     new._poll_msg_fiber:name('kafka_msg_poller')
 
     if config.log_callback ~= nil then
-        new._poll_logs_fiber = fiber.create(function()
+        new._poll_logs_fiber = fiber.new(function()
             new:_poll_logs()
         end)
         new._poll_logs_fiber:name('kafka_logs_poller')
+        new._poll_logs_fiber:set_joinable(true)
     end
 
     if config.stats_callback ~= nil then
-        new._poll_stats_fiber = fiber.create(function()
+        new._poll_stats_fiber = fiber.new(function()
             new:_poll_stats()
         end)
         new._poll_stats_fiber:name('kafka_stats_poller')
+        new._poll_stats_fiber:set_joinable(true)
     end
 
     if config.error_callback ~= nil then
-        new._poll_errors_fiber = fiber.create(function()
+        new._poll_errors_fiber = fiber.new(function()
             new:_poll_errors()
         end)
         new._poll_errors_fiber:name('kafka_error_poller')
+        new._poll_errors_fiber:set_joinable(true)
     end
 
     if config.rebalance_callback ~= nil then
-        new._poll_rebalances_fiber = fiber.create(function()
+        new._poll_rebalances_fiber = fiber.new(function()
             new:_poll_rebalances()
         end)
         new._poll_rebalances_fiber:name('kafka_rebalances_poller')
+        new._poll_rebalances_fiber:set_joinable(true)
     end
 
     return new, nil
@@ -157,34 +162,40 @@ jit.off(Consumer._poll_rebalances)
 
 function Consumer:close()
     if self._consumer == nil then
-        return false
+        return true
     end
 
-    local ok = self._consumer:close()
+    local ok, err = self._consumer:close()
 
-    self._poll_msg_fiber:cancel()
-    self._output_ch:close()
+    if self._poll_msg_fiber ~= nil and self._poll_msg_fiber:status() ~= 'dead' then
+        self._poll_msg_fiber:cancel()
+    end
+    if self._output_ch ~= nil and not self._output_ch:is_closed() then
+        self._output_ch:close()
+    end
+    self._poll_msg_fiber:join()
 
-    fiber.yield()
-
-    if self._poll_logs_fiber ~= nil then
+    if self._poll_logs_fiber ~= nil and self._poll_logs_fiber:status() ~= 'dead' then
         self._poll_logs_fiber:cancel()
     end
-    if self._poll_stats_fiber ~= nil then
+    if self._poll_stats_fiber ~= nil and self._poll_stats_fiber:status() ~= 'dead' then
         self._poll_stats_fiber:cancel()
     end
-    if self._poll_errors_fiber ~= nil then
+    if self._poll_errors_fiber ~= nil and self._poll_errors_fiber:status() ~= 'dead' then
         self._poll_errors_fiber:cancel()
     end
-    if self._poll_rebalances_fiber ~= nil then
+    if self._poll_rebalances_fiber ~= nil and self._poll_rebalances_fiber:status() ~= 'dead' then
         self._poll_rebalances_fiber:cancel()
     end
 
+    self._poll_errors_fiber:join()
+    self._poll_stats_fiber:join()
+    self._poll_logs_fiber:join()
+    self._poll_rebalances_fiber:join()
+
     self._consumer:destroy()
-
     self._consumer = nil
-
-    return ok
+    return ok, err
 end
 
 local function get_timeout_from_options(options)
@@ -286,26 +297,34 @@ function Producer.create(config)
     }
     setmetatable(new, Producer)
 
-    new._msg_delivery_poll_fiber = fiber.create(function()
+    new._msg_delivery_poll_fiber = fiber.new(function()
         new:_msg_delivery_poll()
     end)
+    new._msg_delivery_poll_fiber:set_joinable(true)
+    new._msg_delivery_poll_fiber:name('kafka_delivery_poller')
 
     if config.log_callback ~= nil then
-        new._poll_logs_fiber = fiber.create(function()
+        new._poll_logs_fiber = fiber.new(function()
             new:_poll_logs()
         end)
+        new._poll_logs_fiber:name('kafka_logs_poller')
+        new._poll_logs_fiber:set_joinable(true)
     end
 
     if config.stats_callback ~= nil then
-        new._poll_stats_fiber = fiber.create(function()
+        new._poll_stats_fiber = fiber.new(function()
             new:_poll_stats()
         end)
+        new._poll_stats_fiber:name('kafka_stats_poller')
+        new._poll_stats_fiber:set_joinable(true)
     end
 
     if config.error_callback ~= nil then
-        new._poll_errors_fiber = fiber.create(function()
+        new._poll_errors_fiber = fiber.new(function()
             new:_poll_errors()
         end)
+        new._poll_errors_fiber:name('kafka_error_poller')
+        new._poll_errors_fiber:set_joinable(true)
     end
 
     return new, nil
@@ -452,27 +471,32 @@ end
 
 function Producer:close()
     if self._producer == nil then
-        return false
+        return true
     end
 
-    local ok = self._producer:close()
+    local ok, err = self._producer:close()
 
-    self._msg_delivery_poll_fiber:cancel()
-    if self._poll_logs_fiber ~= nil then
+    if self._msg_delivery_poll_fiber ~= nil and self._msg_delivery_poll_fiber:status() ~= 'dead' then
+        self._msg_delivery_poll_fiber:cancel()
+    end
+    if self._poll_logs_fiber ~= nil and self._poll_logs_fiber:status() ~= 'dead' then
         self._poll_logs_fiber:cancel()
     end
-    if self._poll_stats_fiber ~= nil then
+    if self._poll_stats_fiber ~= nil and self._poll_stats_fiber:status() ~= 'dead' then
         self._poll_stats_fiber:cancel()
     end
-    if self._poll_errors_fiber ~= nil then
+    if self._poll_errors_fiber ~= nil and self._poll_errors_fiber:status() ~= 'dead' then
         self._poll_errors_fiber:cancel()
     end
 
+    self._msg_delivery_poll_fiber:join()
+    self._poll_logs_fiber:join()
+    self._poll_stats_fiber:join()
+    self._poll_errors_fiber:join()
+
     self._producer:destroy()
-
     self._producer = nil
-
-    return ok
+    return ok, err
 end
 
 return {

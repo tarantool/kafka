@@ -272,12 +272,8 @@ lua_consumer_poll_msg(struct lua_State *L) {
     return 1;
 }
 
-LUA_RDKAFKA_POLL_FUNC(consumer, poll_logs, LOG_QUEUE, destroy_log_msg, push_log_cb_args)
-LUA_RDKAFKA_POLL_FUNC(consumer, poll_stats, STATS_QUEUE, free, push_stats_cb_args)
-LUA_RDKAFKA_POLL_FUNC(consumer, poll_errors, ERROR_QUEUE, destroy_error_msg, push_errors_cb_args)
-
 static int
-lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, const rebalance_msg_t *msg) {
+push_rebalance_cb_args(struct lua_State *L, const rebalance_msg_t *msg) {
     rd_kafka_topic_partition_t *tp = NULL;
 
     lua_createtable(L, 0, 1); // main table
@@ -286,7 +282,7 @@ lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, const rebalanc
         lua_pushstring(L, "error");
         lua_pushstring(L, rd_kafka_err2str(msg->err));
         lua_settable(L, -3);
-        return 0;
+        return 1;
     }
 
     const char *top_key = (msg->kind == REB_EVENT_ASSIGN) ? "assigned" : "revoked";
@@ -295,9 +291,8 @@ lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, const rebalanc
 
     rd_kafka_topic_partition_list_t *lst = msg->partitions;
     if (lst == NULL) {
-        /* пустой список — ок */
         lua_settable(L, -3); // main[top_key] = {}
-        return 0;
+        return 1;
     }
 
     for (int i = 0; i < lst->cnt; i++) {
@@ -321,54 +316,13 @@ lua_prepare_rebalance_callback_args_on_stack(struct lua_State *L, const rebalanc
     }
 
     lua_settable(L, -3); // main[top_key] = topics_table
-    return 0;
-}
-
-int
-lua_consumer_poll_rebalances(struct lua_State *L) {
-    if (lua_gettop(L) != 2)
-        luaL_error(L, "Usage: count, err = consumer:poll_rebalances(limit)");
-
-    consumer_t *consumer = lua_check_consumer(L, 1);
-    if (consumer->event_queues == NULL ||
-        consumer->event_queues->queues[REBALANCE_QUEUE] == NULL ||
-        consumer->event_queues->cb_refs[REBALANCE_QUEUE] == LUA_REFNIL) {
-        lua_pushnumber(L, 0);
-        lua_pushliteral(L, "Consumer poll rebalances error: callback for rebalance is not set");
-        return 2;
-    }
-
-    int limit = lua_tonumber(L, 2);
-    int count = 0;
-
-    while (count < limit) {
-        rebalance_msg_t *msg = queue_pop(consumer->event_queues->queues[REBALANCE_QUEUE]);
-        if (msg == NULL)
-            break;
-        count++;
-
-        lua_rawgeti(L, LUA_REGISTRYINDEX, consumer->event_queues->cb_refs[REBALANCE_QUEUE]);
-
-        if (lua_prepare_rebalance_callback_args_on_stack(L, msg) != 0) {
-            destroy_rebalance_msg(msg);
-            lua_pushinteger(L, count);
-            lua_pushliteral(L, "unknown error on rebalance callback args processing");
-            return 2;
-        }
-
-        int rc = lua_pcall(L, 1, 0, 0);
-        destroy_rebalance_msg(msg);
-
-        if (rc != 0) {
-            lua_pushinteger(L, count);
-            lua_insert(L, -2);
-            return 2;
-        }
-    }
-
-    lua_pushinteger(L, count);
     return 1;
 }
+
+LUA_RDKAFKA_POLL_FUNC(consumer, poll_logs, LOG_QUEUE, destroy_log_msg, push_log_cb_args)
+LUA_RDKAFKA_POLL_FUNC(consumer, poll_stats, STATS_QUEUE, free, push_stats_cb_args)
+LUA_RDKAFKA_POLL_FUNC(consumer, poll_errors, ERROR_QUEUE, destroy_error_msg, push_errors_cb_args)
+LUA_RDKAFKA_POLL_FUNC(consumer, poll_rebalances, REBALANCE_QUEUE, destroy_rebalance_msg, push_rebalance_cb_args)
 
 int
 lua_consumer_store_offset(struct lua_State *L) {
@@ -556,21 +510,27 @@ int
 lua_consumer_close(struct lua_State *L) {
     consumer_t **consumer_p = (consumer_t **)luaL_checkudata(L, 1, consumer_label);
     if (consumer_p == NULL || *consumer_p == NULL) {
-        lua_pushboolean(L, 0);
+        /* Already closed/destroyed */
+        lua_pushboolean(L, 1);
         return 1;
     }
+
+    consumer_t *consumer = *consumer_p;
 
     // Stop background poller first.
     // rd_kafka_consumer_poll() / rd_kafka_consumer_close() must not run concurrently
     // from multiple threads on the same consumer handle.
-    consumer_stop_and_destroy_poller(*consumer_p);
+    consumer_stop_and_destroy_poller(consumer);
 
     // unsubscribe consumer to make possible close it
-    rd_kafka_unsubscribe((*consumer_p)->rd_consumer);
-    rd_kafka_commit((*consumer_p)->rd_consumer, NULL, 0); // sync commit of current offsets
+    if (consumer->rd_consumer != NULL) {
+        rd_kafka_unsubscribe(consumer->rd_consumer);
+        rd_kafka_commit(consumer->rd_consumer, NULL, 0); // sync commit of current offsets
 
-    // trying to close in background until success
-    coio_call(wait_consumer_close, (*consumer_p)->rd_consumer);
+        // trying to close in background until success
+        coio_call(wait_consumer_close, consumer->rd_consumer);
+    }
+
     lua_pushboolean(L, 1);
     return 1;
 }
