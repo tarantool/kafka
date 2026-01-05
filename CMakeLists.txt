@@ -74,8 +74,8 @@ if(STATIC_BUILD)
             --disable-lz4-ext
             --disable-curl
             --enable-static
-        BUILD_COMMAND make -C src -j
-        INSTALL_COMMAND make -C src install
+        BUILD_COMMAND $(MAKE) -C src -j
+        INSTALL_COMMAND $(MAKE) -C src install
         PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-47.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-52.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-55.patch"
@@ -84,7 +84,6 @@ if(STATIC_BUILD)
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-71.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-72.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-tarantool-security-94.patch"
-        COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-fix-ubsan.patch"
         COMMAND       patch -d <SOURCE_DIR> -p1 -i "${PATCHES_DIR}/librdkafka-fix-centos7.patch"
     )
 
