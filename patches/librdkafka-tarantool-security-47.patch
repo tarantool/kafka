@@ -1,8 +1,8 @@
 diff --git a/src/rdkafka_assignment.c b/src/rdkafka_assignment.c
-index 6d1f0191..ee4cea61 100644
+index 2d012058..7836f223 100644
 --- a/src/rdkafka_assignment.c
 +++ b/src/rdkafka_assignment.c
-@@ -315,21 +315,22 @@ static void rd_kafka_assignment_handle_OffsetFetch(rd_kafka_t *rk,
+@@ -316,21 +316,22 @@ static void rd_kafka_assignment_handle_OffsetFetch(rd_kafka_t *rk,
                          rd_kafka_dbg(
                              rk, CGRP, "OFFSET",
                              "Offset fetch error for %d partition(s): %s",
@@ -24,7 +24,9 @@ index 6d1f0191..ee4cea61 100644
 -
 -        rd_kafka_topic_partition_list_destroy(offsets);
 +        if (offsets) {
-+            rd_kafka_assignment_apply_offsets(rk, offsets, err);
-+            rd_kafka_topic_partition_list_destroy(offsets);
++                rd_kafka_assignment_apply_offsets(rk, offsets, err);
++                rd_kafka_topic_partition_list_destroy(offsets);
 +        }
  }
+ 
+ static void rd_kafka_share_assignment_serve_removals(rd_kafka_t *rk) {
