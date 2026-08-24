@@ -29,5 +29,6 @@ build = {
         ENABLE_UBSAN="$(ENABLE_UBSAN)",
         WITH_OPENSSL_1_1="$(WITH_OPENSSL_1_1)",
         WITH_GSSAPI="$(WITH_GSSAPI)",
+        WITH_ZSTD="$(WITH_ZSTD)",
     }
 }
