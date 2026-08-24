@@ -15,6 +15,7 @@ find_package(Tarantool REQUIRED)
 set(STATIC_BUILD "OFF" CACHE BOOL "Link dependencies statically?")
 set(WITH_OPENSSL_1_1 "OFF" CACHE BOOL "Require openssl version >= 1.1?")
 set(WITH_GSSAPI "OFF" CACHE BOOL "Enable Kerberos (GSSAPI) support")
+set(WITH_ZSTD "OFF" CACHE BOOL "Enable Zstandard compression support")
 set(ENABLE_ASAN "OFF" CACHE BOOL "Enable ASAN")
 set(ENABLE_UBSAN "OFF" CACHE BOOL "Enable UBSAN")
 
@@ -52,6 +53,12 @@ if (WITH_GSSAPI)
     set(LIBRDKAFKA_FLAGS ${LIBRDKAFKA_FLAGS} --enable-gssapi)
 endif()
 
+if (WITH_ZSTD)
+    set(LIBRDKAFKA_FLAGS ${LIBRDKAFKA_FLAGS} --enable-zstd)
+else()
+    set(LIBRDKAFKA_FLAGS ${LIBRDKAFKA_FLAGS} --disable-zstd)
+endif()
+
 if(STATIC_BUILD)
     include(ExternalProject)
     set(PATCHES_DIR "${CMAKE_SOURCE_DIR}/patches")
@@ -69,7 +76,6 @@ if(STATIC_BUILD)
             ${LIBRDKAFKA_FLAGS}
 
             --enable-ssl
-            --disable-zstd
             --disable-lz4
             --disable-lz4-ext
             --disable-curl
