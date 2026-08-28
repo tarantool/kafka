@@ -1,6 +1,12 @@
 local log = require("log")
 local fiber = require('fiber')
-local tnt_kafka = require("kafka.tntkafka")
+
+local ok, tnt_kafka = pcall(require, "kafka.tntkafka")
+if not ok then
+    package.loaded["kafka"] = nil
+    package.loaded["kafka.tntkafka"] = nil
+    error(tnt_kafka, 0)
+end
 
 local DEFAULT_TIMEOUT_MS = 2000
 
