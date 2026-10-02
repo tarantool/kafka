@@ -1,0 +1,740 @@
+diff --git a/.semaphore/semaphore.yml b/.semaphore/semaphore.yml
+index 4fa5c3fb..3fb2d0a4 100644
+--- a/.semaphore/semaphore.yml
++++ b/.semaphore/semaphore.yml
+@@ -291,7 +291,7 @@ blocks:
+             - cache store kafka-windows-${env:KAFKA_VERSION}-${env:CACHE_TAG} C:\kafka.tgz
+             - tar -xzf C:\kafka.tgz -C C:\
+             - Add-Content "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties" "`ngroup.share.min.record.lock.duration.ms=1000`ntransaction.state.log.replication.factor=1`ntransaction.state.log.min.isr=1"
+-            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\x64\Release\tests.exe; Stop-Job -Name kafka-broker
++            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092`nbroker.address.family=v4"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\x64\Release\tests.exe; Stop-Job -Name kafka-broker
+         - name: 'Windows x86: share consumer tests'
+           env_vars:
+             - name: triplet
+@@ -304,7 +304,7 @@ blocks:
+             - cache store kafka-windows-${env:KAFKA_VERSION}-${env:CACHE_TAG} C:\kafka.tgz
+             - tar -xzf C:\kafka.tgz -C C:\
+             - Add-Content "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties" "`ngroup.share.min.record.lock.duration.ms=1000`ntransaction.state.log.replication.factor=1`ntransaction.state.log.min.isr=1"
+-            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\Win32\Release\tests.exe; Stop-Job -Name kafka-broker
++            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092`nbroker.address.family=v4"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\Win32\Release\tests.exe; Stop-Job -Name kafka-broker
+ 
+   - name: 'Linux x64: release artifact docker builds'
+     dependencies: []
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 2d3ce14e..93ed7881 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,14 +6,6 @@ librdkafka v2.15.1 is a maintenance release:
+   build toolchain (msys2, vcpkg) (#5579).
+ * Fix `int_latency` metric calculation, that was reporting bogus values when
+   `message.timeout.ms` is set to 0 (infinite) (#5335).
+-* IPv6 addresses are wrapped in square brackets following RFC 3986, allowing to connect to those compressed IPv6 addresses (#5544).
+-* IPv6 addresses are correctly passed to OpenSSL as IPs not as hostnames with brackets and the certificate is validated against its `iPAddress` entries instead of against `dNSName` entries (#5544).
+-
+-
+-## Upgrade considerations
+-
+-* If you're parsing the nodename as received by `connect_cb`, `stats_cb`, `ssl_cert_verify_cb` or `throttle_cb`, make sure you're correctly parsing it following RFC 3986. Metadata API calls are unaffected: they return the host and port as separate fields.
+-* Make sure the brokers' certificates carry the IP in an iPAddress entry, not a dNSName entry. Previously the certificate was validated against dNSName (falling back to the subject CN) whenever the address could not be parsed as an IP literal: with OpenSSL < 3.0 or BoringSSL for any IP address, and on all OpenSSL versions for an IPv6 address configured in brackets in bootstrap.servers ([::1]:9092), which never verified. A scoped address (fe80::1%eth0) was likewise dNSName-matched on every version and now has the zone stripped before matching. IPv6 addresses ending in :: could not be connected to at all, as the nodename became host:::port and failed name resolution. In the remaining cases, a bare IPv4 or IPv6 literal on OpenSSL >= 3.0, the iPAddress entry was already used, and behaviour is unchanged.
+ 
+ 
+ ## Security considerations
+diff --git a/STATISTICS.md b/STATISTICS.md
+index 13c863c4..db2cb437 100644
+--- a/STATISTICS.md
++++ b/STATISTICS.md
+@@ -81,9 +81,9 @@ Per broker statistics.
+ 
+ Field | Type | Example | Description
+ ----- | ---- | ------- | -----------
+-name | string | `"example.com:9092/13"` | Broker hostname, port and broker id. An IPv6 address is enclosed in brackets per RFC 3986 (`"[::1]:9092/13"`)
++name | string | `"example.com:9092/13"` | Broker hostname, port and broker id
+ nodeid | int | 13 | Broker id (-1 for bootstraps)
+-nodename | string | `"example.com:9092"` | Broker hostname and port. An IPv6 address is enclosed in brackets per RFC 3986 (`"[::1]:9092"`)
++nodename | string | `"example.com:9092"` | Broker hostname
+ source | string | `"configured"` | Broker source (learned, configured, internal, logical)
+ state | string | `"UP"` | Broker state (INIT, DOWN, CONNECT, AUTH, APIVERSION_QUERY, AUTH_HANDSHAKE, UP, UPDATE)
+ stateage | int gauge | | Time since last broker state change (microseconds)
+diff --git a/src/rdkafka_broker.c b/src/rdkafka_broker.c
+index 7e8bd51a..d8e5c48e 100644
+--- a/src/rdkafka_broker.c
++++ b/src/rdkafka_broker.c
+@@ -142,52 +142,7 @@ static void rd_kafka_mk_nodename(char *dest,
+                                  size_t dsize,
+                                  const char *name,
+                                  uint16_t port) {
+-        /* An IPv6 literal must be enclosed in brackets so the trailing
+-         * ":port" is not mistaken for part of the address. Only a bare
+-         * (unbracketed) literal needs wrapping; a hostname or IPv4 address
+-         * never contains a ':'. */
+-        if (strchr(name, ':') && *name != '[')
+-                rd_snprintf(dest, dsize, "[%s]:%hu", name, port);
+-        else
+-                rd_snprintf(dest, dsize, "%s:%hu", name, port);
+-}
+-
+-/**
+- * @brief Extract the bare hostname from a broker nodename: the inverse of
+- *        rd_kafka_mk_nodename().
+- *
+- * Strips the ":port" suffix, the brackets enclosing an IPv6 literal
+- * ("[2001:db8::1]:9092" -> "2001:db8::1"), and the zone id of a scoped IPv6
+- * literal
+- * ("fe80::1%eth0" -> "fe80::1", also "%25eth0" when percent-encoded per
+- * RFC 6874): the zone identifies the local link the address is reachable on
+- * (RFC 4007), not the peer, so it has no place in a hostname used to
+- * identify the remote end (SNI, certificate verification, SASL).
+- */
+-void rd_kafka_nodename_to_hostname(const char *nodename,
+-                                   char *dest,
+-                                   size_t dsize) {
+-        char *t;
+-
+-        rd_strlcpy(dest, nodename, dsize);
+-
+-        /* Strip the ":port" suffix. Use the last ':' so an IPv6 literal such
+-         * as "[2001:db8::1]:9092" is not truncated at a ':' within the address.
+-         */
+-        if ((t = strrchr(dest, ':')))
+-                *t = '\0';
+-
+-        /* Strip the enclosing brackets from an IPv6 literal, leaving the bare
+-         * address: "[2001:db8::1]" -> "2001:db8::1". */
+-        if (*dest == '[') {
+-                memmove(dest, dest + 1, strlen(dest));
+-                if ((t = strrchr(dest, ']')))
+-                        *t = '\0';
+-        }
+-
+-        /* Strip the zone id from a scoped IPv6 literal. */
+-        if (strchr(dest, ':') && (t = strchr(dest, '%')))
+-                *t = '\0';
++        rd_snprintf(dest, dsize, "%s:%hu", name, port);
+ }
+ 
+ /**
+@@ -6764,107 +6719,6 @@ static int rd_ut_ApiVersion_at_least(void) {
+         RD_UT_PASS();
+ }
+ 
+-/**
+- * @brief Unittest for broker nodename construction.
+- *
+- * A nodename produced by rd_kafka_mk_nodename() must be split back into the
+- * original host and port by rd_addrinfo_prepare() (the parsing that feeds
+- * getaddrinfo()). This exercises IPv6 literals, in particular compressed
+- * forms ending in "::", which otherwise concatenate into an unresolvable
+- * ":::port" and fail name resolution.
+- */
+-static int rd_ut_mk_nodename(void) {
+-        static const struct {
+-                const char *host;
+-                uint16_t port;
+-                const char *exp_host; /* NULL: same as host */
+-        } hosts[] = {
+-            {"broker.example.com", 9092},
+-            {"192.0.2.1", 9092},
+-            {"2001:db8:0:0:0:0:0:1", 9092}, /* full IPv6 */
+-            {"2001:db8::", 9092},           /* compressed tail */
+-            {"fe80::", 9092},               /* compressed */
+-            {"::1", 9092},                  /* IPv6 loopback */
+-            /* An IPv6 literal that is already enclosed in brackets, as it is
+-             * when configured that way in bootstrap.servers, must not be
+-             * bracketed a second time. */
+-            {"[::1]", 9092, "::1"},
+-            {"[2001:db8::]", 9092, "2001:db8::"},
+-            {NULL, 0},
+-        };
+-        int i;
+-        char nodename[256];
+-        char expected_port[16];
+-        char *node, *svc;
+-        const char *errstr;
+-        const char *exp_host;
+-
+-        for (i = 0; hosts[i].host; i++) {
+-                rd_kafka_mk_nodename(nodename, sizeof(nodename), hosts[i].host,
+-                                     hosts[i].port);
+-
+-                exp_host =
+-                    hosts[i].exp_host ? hosts[i].exp_host : hosts[i].host;
+-
+-                errstr = rd_addrinfo_prepare(nodename, &node, &svc);
+-                RD_UT_ASSERT(!errstr,
+-                             "host '%s' -> nodename '%s': "
+-                             "rd_addrinfo_prepare failed: %s",
+-                             hosts[i].host, nodename, errstr);
+-
+-                RD_UT_ASSERT(!strcmp(node, exp_host),
+-                             "host '%s' -> nodename '%s': parsed host '%s' "
+-                             "does not match expected '%s'",
+-                             hosts[i].host, nodename, node, exp_host);
+-
+-                rd_snprintf(expected_port, sizeof(expected_port), "%hu",
+-                            hosts[i].port);
+-                RD_UT_ASSERT(!strcmp(svc, expected_port),
+-                             "host '%s' -> nodename '%s': parsed port '%s' "
+-                             "does not match expected '%s'",
+-                             hosts[i].host, nodename, svc, expected_port);
+-        }
+-
+-        RD_UT_PASS();
+-}
+-
+-/**
+- * @brief Unittest for hostname extraction from a broker nodename.
+- *
+- * The nodename carries a ":port" suffix, IPv6 literals are bracketed
+- * ("[2001:db8::1]:9092") and may be scoped ("[fe80::1%eth0]:9092"); the
+- * hostname must be the bare address.
+- */
+-static int rd_ut_nodename_to_hostname(void) {
+-        static const struct {
+-                const char *nodename;
+-                const char *exp;
+-        } tests[] = {
+-            {"broker.example.com:9092", "broker.example.com"},
+-            {"192.0.2.1:9092", "192.0.2.1"},
+-            {"[2001:db8::]:9092", "2001:db8::"},
+-            {"[fe80::]:9092", "fe80::"},
+-            {"[::1]:9092", "::1"},
+-            /* The zone id of a scoped literal is stripped, both plain and
+-             * percent-encoded (RFC 6874). */
+-            {"[fe80::1%eth0]:9092", "fe80::1"},
+-            {"[fe80::1%25eth0]:9092", "fe80::1"},
+-            {NULL, NULL},
+-        };
+-        int i;
+-        char hostname[RD_KAFKA_NODENAME_SIZE];
+-
+-        for (i = 0; tests[i].nodename; i++) {
+-                rd_kafka_nodename_to_hostname(tests[i].nodename, hostname,
+-                                              sizeof(hostname));
+-                RD_UT_ASSERT(!strcmp(hostname, tests[i].exp),
+-                             "nodename '%s': expected hostname '%s', got '%s'",
+-                             tests[i].nodename, tests[i].exp, hostname);
+-        }
+-
+-        RD_UT_PASS();
+-}
+-
+ /**
+  * @name Unit tests
+  * @{
+@@ -6875,8 +6729,6 @@ int unittest_broker(void) {
+ 
+         fails += rd_ut_reconnect_backoff();
+         fails += rd_ut_ApiVersion_at_least();
+-        fails += rd_ut_mk_nodename();
+-        fails += rd_ut_nodename_to_hostname();
+ 
+         return fails;
+ }
+diff --git a/src/rdkafka_broker.h b/src/rdkafka_broker.h
+index 1fa996e3..a0881501 100644
+--- a/src/rdkafka_broker.h
++++ b/src/rdkafka_broker.h
+@@ -713,10 +713,6 @@ rd_kafka_broker_t *rd_kafka_broker_add_logical(rd_kafka_t *rk,
+ void rd_kafka_broker_set_nodename(rd_kafka_broker_t *rkb,
+                                   rd_kafka_broker_t *from_rkb);
+ 
+-void rd_kafka_nodename_to_hostname(const char *nodename,
+-                                   char *dest,
+-                                   size_t dsize);
+-
+ void rd_kafka_broker_connect_up(rd_kafka_broker_t *rkb);
+ void rd_kafka_broker_connect_done(rd_kafka_broker_t *rkb, const char *errstr);
+ 
+diff --git a/src/rdkafka_sasl.c b/src/rdkafka_sasl.c
+index a821a431..aab16f6d 100644
+--- a/src/rdkafka_sasl.c
++++ b/src/rdkafka_sasl.c
+@@ -236,7 +236,7 @@ int rd_kafka_sasl_client_new(rd_kafka_transport_t *rktrans,
+         int r;
+         rd_kafka_broker_t *rkb = rktrans->rktrans_rkb;
+         rd_kafka_t *rk         = rkb->rkb_rk;
+-        char hostname[RD_KAFKA_NODENAME_SIZE];
++        char *hostname, *t;
+         const struct rd_kafka_sasl_provider *provider =
+             rk->rk_conf.sasl.provider;
+ 
+@@ -263,10 +263,12 @@ int rd_kafka_sasl_client_new(rd_kafka_transport_t *rktrans,
+         }
+ 
+         rd_kafka_broker_lock(rktrans->rktrans_rkb);
+-        rd_kafka_nodename_to_hostname(rktrans->rktrans_rkb->rkb_nodename,
+-                                      hostname, sizeof(hostname));
++        rd_strdupa(&hostname, rktrans->rktrans_rkb->rkb_nodename);
+         rd_kafka_broker_unlock(rktrans->rktrans_rkb);
+ 
++        if ((t = strchr(hostname, ':')))
++                *t = '\0'; /* remove ":port" */
++
+         rd_rkb_dbg(rkb, SECURITY, "SASL",
+                    "Initializing SASL client: service name %s, "
+                    "hostname %s, mechanisms %s, provider %s",
+diff --git a/src/rdkafka_ssl.c b/src/rdkafka_ssl.c
+index 42b4780d..fccb9d3f 100644
+--- a/src/rdkafka_ssl.c
++++ b/src/rdkafka_ssl.c
+@@ -493,41 +493,31 @@ static int rd_kafka_transport_ssl_set_endpoint_id(rd_kafka_transport_t *rktrans,
+                                                   size_t errstr_size) {
+         char name[RD_KAFKA_NODENAME_SIZE];
+         char name_for_verify[RD_KAFKA_NODENAME_SIZE];
+-        rd_bool_t is_ip_literal;
+-
+-        /* Extract the bare hostname or address from the nodename (see
+-         * rd_kafka_nodename_to_hostname()): both SNI and OpenSSL's
+-         * certificate verification expect the bare address of an IPv6
+-         * literal, not the bracketed URL form the nodename holds — a
+-         * bracketed literal does not parse as an IP address, so it would be
+-         * matched against the certificate's dNSName entries instead of its
+-         * iPAddress entries and fail verification. Likewise a certificate
+-         * cannot assert a zone id: an iPAddress entry holds the 4 or 16
+-         * address octets alone (RFC 5280). */
++        char *t;
++
+         rd_kafka_broker_lock(rktrans->rktrans_rkb);
+-        rd_kafka_nodename_to_hostname(rktrans->rktrans_rkb->rkb_nodename, name,
+-                                      sizeof(name));
++        rd_snprintf(name, sizeof(name), "%s",
++                    rktrans->rktrans_rkb->rkb_nodename);
+         rd_kafka_broker_unlock(rktrans->rktrans_rkb);
+ 
++        /* Remove ":9092" port suffix from nodename */
++        if ((t = strrchr(name, ':')))
++                *t = '\0';
++
+         /* Normalize hostname (remove trailing dot) for both SNI and certificate
+          * verification */
+         rd_kafka_ssl_normalize_hostname(name, name_for_verify,
+                                         sizeof(name_for_verify));
+ 
+-        /* Is this a numerical address rather than a hostname?
+-         * An IP literal must not be sent as SNI (RFC 6066) and must be
+-         * verified against the certificate's iPAddress entries rather than its
+-         * dNSName entries.
+-         * The enclosing brackets were stripped above, so a ':' identifies an
+-         * IPv6 literal: a DNS hostname can never contain one. */
+-        is_ip_literal = *name_for_verify &&
+-                        (strchr(name_for_verify, ':') != NULL ||
+-                         /*ipv4*/ strspn(name_for_verify, "0123456789.") ==
+-                             strlen(name_for_verify));
+-
+ #if (OPENSSL_VERSION_NUMBER >= 0x0090806fL) && !defined(OPENSSL_NO_TLSEXT)
+         /* If non-numerical hostname, send it for SNI */
+-        if (!is_ip_literal &&
++        if (!(/*ipv6*/ (
++                  strchr(name_for_verify, ':') &&
++                  strspn(name_for_verify, "0123456789abcdefABCDEF:.[]%") ==
++                      strlen(name_for_verify)) ||
++              /*ipv4*/
++              strspn(name_for_verify, "0123456789.") ==
++                  strlen(name_for_verify)) &&
+             !SSL_set_tlsext_host_name(rktrans->rktrans_ssl, name_for_verify))
+                 goto fail;
+ #endif
+@@ -544,42 +534,19 @@ static int rd_kafka_transport_ssl_set_endpoint_id(rd_kafka_transport_t *rktrans,
+                            name, name_for_verify);
+         }
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x1000200fL /* 1.0.2 */
++#if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(OPENSSL_IS_BORINGSSL)
++        if (!SSL_set1_host(rktrans->rktrans_ssl, name_for_verify))
++                goto fail;
++#elif OPENSSL_VERSION_NUMBER >= 0x1000200fL /* 1.0.2 */
+         {
+                 X509_VERIFY_PARAM *param;
+ 
+                 param = SSL_get0_param(rktrans->rktrans_ssl);
+ 
+-                /* Match an IP literal against the certificate's iPAddress
+-                 * entries and a hostname against its dNSName entries.
+-                 *
+-                 * X509_VERIFY_PARAM_*() is used for both rather than
+-                 * SSL_set1_host(): both have been available since 1.0.2,
+-                 * whereas SSL_set1_host() requires 1.1.0, and its recognition
+-                 * of IP literals was added later still, so relying on it would
+-                 * silently match a literal against the dNSName entries on
+-                 * older versions and never against the iPAddress entries.
+-                 *
+-                 * Fall back to the dNSName entries if the name only looks
+-                 * numerical but is not a valid address: "1.2.3" is a legal
+-                 * hostname. */
+-                if (is_ip_literal &&
+-                    X509_VERIFY_PARAM_set1_ip_asc(param, name_for_verify) == 1)
+-                        ; /* verified as an address */
+-                else {
+-                        if (is_ip_literal) {
+-                                /* Discard the address parsing error so that a
+-                                 * later failure reports its own reason. */
+-                                ERR_clear_error();
+-                                is_ip_literal = rd_false;
+-                        }
+-
+-                        if (!X509_VERIFY_PARAM_set1_host(
+-                                param, name_for_verify,
+-                                strnlen(name_for_verify,
+-                                        sizeof(name_for_verify))))
+-                                goto fail;
+-                }
++                if (!X509_VERIFY_PARAM_set1_host(
++                        param, name_for_verify,
++                        strnlen(name_for_verify, sizeof(name_for_verify))))
++                        goto fail;
+         }
+ #else
+         rd_snprintf(errstr, errstr_size,
+@@ -590,8 +557,8 @@ static int rd_kafka_transport_ssl_set_endpoint_id(rd_kafka_transport_t *rktrans,
+ #endif
+ 
+         rd_rkb_dbg(rktrans->rktrans_rkb, SECURITY, "ENDPOINT",
+-                   "Enabled endpoint identification using %s %s",
+-                   is_ip_literal ? "address" : "hostname", name_for_verify);
++                   "Enabled endpoint identification using hostname %s",
++                   name_for_verify);
+ 
+         return 0;
+ 
+diff --git a/tests/0191-ipv6_nodename_mock.c b/tests/0191-ipv6_nodename_mock.c
+deleted file mode 100644
+index 3486c06e..00000000
+--- a/tests/0191-ipv6_nodename_mock.c
++++ /dev/null
+@@ -1,279 +0,0 @@
+-/*
+- * librdkafka - Apache Kafka C library
+- *
+- * Copyright (c) 2026, Confluent Inc.
+- * All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions are met:
+- *
+- * 1. Redistributions of source code must retain the above copyright notice,
+- *    this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright notice,
+- *    this list of conditions and the following disclaimer in the documentation
+- *    and/or other materials provided with the distribution.
+- *
+- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+- * POSSIBILITY OF SUCH DAMAGE.
+- */
+-
+-#include "test.h"
+-
+-#ifndef _WIN32
+-#include <netdb.h>
+-#else
+-#define WIN32_MEAN_AND_LEAN
+-#include <winsock2.h>
+-#include <ws2ipdef.h>
+-#include <ws2tcpip.h>
+-#endif
+-
+-/**
+- * @name Verify that an IPv6 address advertised in a Metadata response is
+- *       turned into a resolvable broker nodename.
+- *
+- * A broker that advertises a compressed IPv6 literal (one ending in "::")
+- * used to produce a nodename such as "2001:db8:::9092" — the trailing
+- * "::" of the address concatenated directly against the ":port", giving a
+- * ":::" run that name resolution rejects with "Name or service not known".
+- * The literal must instead be enclosed in brackets, as in an URL authority:
+- * "[2001:db8::]:9092".
+- *
+- * Two subtests, each with its own advertised address:
+- *  - do_test_ipv6_compressed(): a compressed documentation literal (RFC 3849
+- *    2001:db8::/32) ending in "::", mirroring the customer report. This owns
+- *    the construction coverage: it proves the "::"-tail literal is bracketed
+- *    rather than left as the malformed ":::" form. Resolution is not
+- *    asserted, so it needs no IPv6 and never skips.
+- *  - do_test_ipv6_loopback(): the IPv6 loopback "::1". This owns the
+- *    resolution coverage: the full build -> resolve -> connect path is
+- *    exercised and asserted, proving the bracketed nodename is understood by
+- *    rd_addrinfo_prepare(). It is skipped up front, before any work, on the
+- *    rare host whose resolver cannot return an IPv6 address at all.
+- *
+- * The client is configured with broker.address.family=any: the test
+- * environment's test.conf pins it to v4 (the test brokers listen on IPv4
+- * localhost), under which no IPv6 literal can ever resolve.
+- */
+-
+-/* Broker address advertised by the current subtest and the nodename it must
+- * produce. Set by each subtest before creating the client; read by the log
+- * interceptor. */
+-static const char *ipv6_host;
+-static const char *exp_nodename;
+-
+-static rd_bool_t nodename_built;
+-static rd_bool_t resolve_succeeded;
+-
+-/**
+- * @brief Whether the IPv6 loopback can be resolved on this machine.
+- *
+- * Issues the same query rd_kafka_broker_resolve() will issue with
+- * broker.address.family=any: some resolvers (e.g. musl in a container
+- * without an IPv6 stack) apply the AI_ADDRCONFIG filter to numeric literals
+- * and refuse every IPv6 address, an environment limitation unrelated to the
+- * nodename handling under test.
+- */
+-static rd_bool_t ipv6_loopback_resolvable(void) {
+-        struct addrinfo hints = RD_ZERO_INIT;
+-        struct addrinfo *res  = NULL;
+-        int r;
+-
+-        hints.ai_family   = AF_UNSPEC;
+-        hints.ai_socktype = SOCK_STREAM;
+-        hints.ai_protocol = IPPROTO_TCP;
+-        hints.ai_flags    = AI_ADDRCONFIG;
+-
+-        r = getaddrinfo("::1", "9092", &hints, &res);
+-        if (res)
+-                freeaddrinfo(res);
+-
+-        return r == 0;
+-}
+-
+-/**
+- * @brief Inspect broker log lines for the nodename derived from the
+- *        advertised IPv6 address.
+- */
+-static void ipv6_nodename_mock_log_cb(const rd_kafka_t *rk,
+-                                      int level,
+-                                      const char *fac,
+-                                      const char *buf) {
+-        /* Resolution succeeded once a connection to the advertised address is
+-         * attempted. The connection itself then fails (nothing is listening),
+-         * which is expected and ignored by ipv6_nodename_is_fatal_cb(). */
+-        if (strstr(buf, "Connecting to") && strstr(buf, ipv6_host))
+-                resolve_succeeded = rd_true;
+-
+-        if (strstr(buf, "Nodename changed") && strstr(buf, exp_nodename))
+-                nodename_built = rd_true;
+-}
+-
+-/**
+- * @brief Treat the broker connection errors caused by the (deliberately
+- *        unreachable) advertised address as non-fatal so the test can
+- *        inspect the constructed nodename.
+- */
+-static int ipv6_nodename_is_fatal_cb(rd_kafka_t *rk,
+-                                     rd_kafka_resp_err_t err,
+-                                     const char *reason) {
+-        if (err == RD_KAFKA_RESP_ERR__RESOLVE ||
+-            err == RD_KAFKA_RESP_ERR__TRANSPORT ||
+-            err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN) {
+-                TEST_SAY("Ignoring expected error: %s: %s\n",
+-                         rd_kafka_err2name(err), reason);
+-                return 0;
+-        }
+-        return 1;
+-}
+-
+-/**
+- * @brief Advertise \p host as the broker address and wait for the nodename to
+- *        be built.
+- *
+- * When \p wait_for_resolve is true, also wait until the client attempts to
+- * connect to the advertised address (resolve_succeeded), so the caller can
+- * assert on the resolution outcome; otherwise it returns as soon as the
+- * nodename is built.
+- *
+- * Sets the module-level ipv6_host / exp_nodename and the outcome flags, which
+- * the caller inspects.
+- */
+-static void do_advertise_and_wait(const char *host,
+-                                  const char *nodename,
+-                                  rd_bool_t wait_for_resolve) {
+-        rd_kafka_mock_cluster_t *cluster;
+-        const char *bootstraps;
+-        rd_kafka_t *rk;
+-        rd_kafka_conf_t *conf;
+-        const rd_kafka_metadata_t *md;
+-        test_conf_log_interceptor_t *log_interceptor;
+-        const char *debug_contexts[2] = {"broker", NULL};
+-        int i;
+-
+-        ipv6_host         = host;
+-        exp_nodename      = nodename;
+-        nodename_built    = rd_false;
+-        resolve_succeeded = rd_false;
+-
+-        cluster = test_mock_cluster_new(1, &bootstraps);
+-
+-        test_conf_init(&conf, NULL, tmout_multip(10));
+-        test_conf_set(conf, "bootstrap.servers", bootstraps);
+-        /* The test environment's test.conf pins broker.address.family=v4
+-         * (the test brokers listen on IPv4 localhost), under which no IPv6
+-         * literal can resolve. This test's mock broker addresses are IPv6, so
+-         * lift the pin for this client. */
+-        test_conf_set(conf, "broker.address.family", "any");
+-        log_interceptor = test_conf_set_log_interceptor(
+-            conf, ipv6_nodename_mock_log_cb, debug_contexts);
+-
+-        test_curr->is_fatal_cb = ipv6_nodename_is_fatal_cb;
+-
+-        rk = test_create_handle(RD_KAFKA_PRODUCER, conf);
+-
+-        TEST_SAY("Initial metadata request (learns 127.0.0.1 nodename)\n");
+-        if (!rd_kafka_metadata(rk, 0, NULL, &md, tmout_multip(5000)))
+-                rd_kafka_metadata_destroy(md);
+-
+-        TEST_SAY("Advertising IPv6 broker host %s\n", ipv6_host);
+-        rd_kafka_mock_broker_set_host_port(cluster, 1, ipv6_host, 9092);
+-
+-        TEST_SAY("Metadata request that learns the IPv6 nodename\n");
+-        /* The nodename change is applied when this Metadata response arrives
+-         * over the still-open bootstrap connection; the request itself may
+-         * then time out as the broker becomes unreachable, so don't wait long
+-         * for it. */
+-        if (!rd_kafka_metadata(rk, 0, NULL, &md, tmout_multip(1000)))
+-                rd_kafka_metadata_destroy(md);
+-
+-        /* Wait for the resolution *outcome*, not merely for the nodename to be
+-         * built: "Nodename changed" is logged before the address is resolved,
+-         * so stopping at the nodename would miss a bracketed form that no
+-         * longer parses back. When only construction is under test, stop as
+-         * soon as the nodename is built. */
+-        for (i = 0; i < 50 && !(nodename_built &&
+-                                (!wait_for_resolve || resolve_succeeded));
+-             i++)
+-                rd_kafka_poll(rk, 100);
+-
+-        rd_kafka_destroy(rk);
+-        test_mock_cluster_destroy(cluster);
+-        rd_free(log_interceptor);
+-}
+-
+-/**
+- * @brief The full build -> resolve -> connect path, using the IPv6 loopback
+- *        "::1". Skipped up front, before any work, if this machine's resolver
+- *        cannot return IPv6 addresses at all.
+- */
+-static void do_test_ipv6_loopback(void) {
+-        SUB_TEST();
+-
+-        if (!ipv6_loopback_resolvable())
+-                SUB_TEST_SKIP(
+-                    "this machine's resolver cannot resolve any "
+-                    "IPv6 address (not even ::1)\n");
+-
+-        do_advertise_and_wait("::1", "[::1]:9092",
+-                              rd_true /*wait_for_resolve*/);
+-
+-        TEST_ASSERT(nodename_built,
+-                    "expected the advertised IPv6 literal to produce the "
+-                    "nodename \"%s\"",
+-                    exp_nodename);
+-        TEST_ASSERT(resolve_succeeded,
+-                    "nodename \"%s\" was not resolved: the bracketed literal "
+-                    "was not split back into address and port",
+-                    exp_nodename);
+-
+-        TEST_SAY("IPv6 nodename \"%s\" built and resolved\n", exp_nodename);
+-
+-        SUB_TEST_PASS();
+-}
+-
+-/**
+- * @brief A compressed documentation literal ending in "::" mirrors the
+- *        customer report. Verifies only that it is bracketed, not that it
+- *        resolves (the loopback subtest owns that), so it needs no IPv6 and
+- *        never skips.
+- */
+-static void do_test_ipv6_compressed(void) {
+-        SUB_TEST();
+-
+-        do_advertise_and_wait("2001:db8::", "[2001:db8::]:9092",
+-                              rd_false /*wait_for_resolve*/);
+-
+-        /* nodename_built matches only the bracketed exp_nodename, so a
+-         * regression to the malformed ":::" form (the bug) fails this
+-         * assertion rather than slipping through. */
+-        TEST_ASSERT(nodename_built,
+-                    "expected the advertised \"::\"-tail literal to produce "
+-                    "the bracketed nodename \"%s\"",
+-                    exp_nodename);
+-
+-        TEST_SAY("IPv6 nodename \"%s\" built\n", exp_nodename);
+-
+-        SUB_TEST_PASS();
+-}
+-
+-int main_0191_ipv6_nodename_mock(int argc, char **argv) {
+-        if (test_needs_auth()) {
+-                TEST_SKIP("Mock cluster does not support SSL/SASL\n");
+-                return 0;
+-        }
+-
+-        do_test_ipv6_compressed();
+-        do_test_ipv6_loopback();
+-
+-        return 0;
+-}
+diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
+index fc4fdd54..5fe3e321 100644
+--- a/tests/CMakeLists.txt
++++ b/tests/CMakeLists.txt
+@@ -167,7 +167,6 @@ set(
+     0186-share_consumer_fatal_error.c
+     0187-legacy_msgset_fetch_mock.c
+     0190-share_consumer_telemetry.c
+-    0191-ipv6_nodename_mock.c
+     8000-idle.cpp
+     8001-fetch_from_follower_mock_manual.c
+     test.c
+diff --git a/tests/LibrdkafkaTestApp.py b/tests/LibrdkafkaTestApp.py
+index 95556d9d..4a9816b7 100644
+--- a/tests/LibrdkafkaTestApp.py
++++ b/tests/LibrdkafkaTestApp.py
+@@ -36,6 +36,7 @@ class LibrdkafkaTestApp(App):
+         self.security_protocol = 'PLAINTEXT'
+ 
+         f, self.test_conf_file = self.open_file('test.conf', 'perm')
++        f.write('broker.address.family=v4\n'.encode('ascii'))
+         f.write(('test.sql.command=sqlite3 rdktests\n').encode('ascii'))
+         f.write('test.timeout.multiplier=2\n'.encode('ascii'))
+ 
+diff --git a/tests/test.c b/tests/test.c
+index 9a4380cb..24947655 100644
+--- a/tests/test.c
++++ b/tests/test.c
+@@ -315,7 +315,6 @@ _TEST_DECL(0185_share_consumer_max_poll_interval);
+ _TEST_DECL(0186_share_consumer_fatal_error);
+ _TEST_DECL(0187_legacy_msgset_fetch_mock);
+ _TEST_DECL(0190_share_consumer_telemetry);
+-_TEST_DECL(0191_ipv6_nodename_mock);
+ 
+ /* Manual tests */
+ _TEST_DECL(8000_idle);
+@@ -615,7 +614,6 @@ struct test tests[] = {
+     _TEST(0190_share_consumer_telemetry,
+           TEST_F_MANUAL,
+           TEST_BRKVER(4, 2, 0, 0)),
+-    _TEST(0191_ipv6_nodename_mock, TEST_F_LOCAL),
+ 
+     /* Manual tests */
+     _TEST(8000_idle, TEST_F_MANUAL),
+diff --git a/win32/tests/tests.vcxproj b/win32/tests/tests.vcxproj
+index 37bd24b0..1e8f7dfa 100644
+--- a/win32/tests/tests.vcxproj
++++ b/win32/tests/tests.vcxproj
+@@ -260,7 +260,6 @@
+     <ClCompile Include="..\..\tests\0186-share_consumer_fatal_error.c" />
+     <ClCompile Include="..\..\tests\0187-legacy_msgset_fetch_mock.c" />
+     <ClCompile Include="..\..\tests\0190-share_consumer_telemetry.c" />
+-    <ClCompile Include="..\..\tests\0191-ipv6_nodename_mock.c" />
+     <ClCompile Include="..\..\tests\8000-idle.cpp" />
+     <ClCompile Include="..\..\tests\8001-fetch_from_follower_mock_manual.c" />
+     <ClCompile Include="..\..\tests\test.c" />
+
