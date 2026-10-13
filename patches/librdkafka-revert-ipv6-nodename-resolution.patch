@@ -1,50 +1,9 @@
-diff --git a/.semaphore/semaphore.yml b/.semaphore/semaphore.yml
-index 4fa5c3fb..3fb2d0a4 100644
---- a/.semaphore/semaphore.yml
-+++ b/.semaphore/semaphore.yml
-@@ -291,7 +291,7 @@ blocks:
-             - cache store kafka-windows-${env:KAFKA_VERSION}-${env:CACHE_TAG} C:\kafka.tgz
-             - tar -xzf C:\kafka.tgz -C C:\
-             - Add-Content "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties" "`ngroup.share.min.record.lock.duration.ms=1000`ntransaction.state.log.replication.factor=1`ntransaction.state.log.min.isr=1"
--            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\x64\Release\tests.exe; Stop-Job -Name kafka-broker
-+            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092`nbroker.address.family=v4"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\x64\Release\tests.exe; Stop-Job -Name kafka-broker
-         - name: 'Windows x86: share consumer tests'
-           env_vars:
-             - name: triplet
-@@ -304,7 +304,7 @@ blocks:
-             - cache store kafka-windows-${env:KAFKA_VERSION}-${env:CACHE_TAG} C:\kafka.tgz
-             - tar -xzf C:\kafka.tgz -C C:\
-             - Add-Content "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties" "`ngroup.share.min.record.lock.duration.ms=1000`ntransaction.state.log.replication.factor=1`ntransaction.state.log.min.isr=1"
--            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\Win32\Release\tests.exe; Stop-Job -Name kafka-broker
-+            - $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH", "User"); $env:KAFKA_CLUSTER_ID = & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" random-uuid; & "C:\kafka_2.13-${env:KAFKA_VERSION}\bin\windows\kafka-storage.bat" format --standalone -t $env:KAFKA_CLUSTER_ID -c "C:\kafka_2.13-${env:KAFKA_VERSION}\config\server.properties"; Start-Job -Name kafka-broker -ScriptBlock { param($v) & "C:\kafka_2.13-$v\bin\windows\kafka-server-start.bat" "C:\kafka_2.13-$v\config\server.properties" } -ArgumentList $env:KAFKA_VERSION; Start-Sleep 15; cd tests; Set-Content test.conf "bootstrap.servers=localhost:9092`nbroker.address.family=v4"; Remove-Item Env:TESTS -ErrorAction SilentlyContinue; Remove-Item Env:TESTS_SKIP -ErrorAction SilentlyContinue; $env:RDKAFKA_TEST_CONF = "test.conf"; $env:TESTS_SKIP_BEFORE = "0155"; $env:TEST_BROKER_OS = "windows"; & ..\win32\outdir\v142\Win32\Release\tests.exe; Stop-Job -Name kafka-broker
- 
-   - name: 'Linux x64: release artifact docker builds'
-     dependencies: []
-diff --git a/CHANGELOG.md b/CHANGELOG.md
-index 2d3ce14e..93ed7881 100644
---- a/CHANGELOG.md
-+++ b/CHANGELOG.md
-@@ -6,14 +6,6 @@ librdkafka v2.15.1 is a maintenance release:
-   build toolchain (msys2, vcpkg) (#5579).
- * Fix `int_latency` metric calculation, that was reporting bogus values when
-   `message.timeout.ms` is set to 0 (infinite) (#5335).
--* IPv6 addresses are wrapped in square brackets following RFC 3986, allowing to connect to those compressed IPv6 addresses (#5544).
--* IPv6 addresses are correctly passed to OpenSSL as IPs not as hostnames with brackets and the certificate is validated against its `iPAddress` entries instead of against `dNSName` entries (#5544).
--
--
--## Upgrade considerations
--
--* If you're parsing the nodename as received by `connect_cb`, `stats_cb`, `ssl_cert_verify_cb` or `throttle_cb`, make sure you're correctly parsing it following RFC 3986. Metadata API calls are unaffected: they return the host and port as separate fields.
--* Make sure the brokers' certificates carry the IP in an iPAddress entry, not a dNSName entry. Previously the certificate was validated against dNSName (falling back to the subject CN) whenever the address could not be parsed as an IP literal: with OpenSSL < 3.0 or BoringSSL for any IP address, and on all OpenSSL versions for an IPv6 address configured in brackets in bootstrap.servers ([::1]:9092), which never verified. A scoped address (fe80::1%eth0) was likewise dNSName-matched on every version and now has the zone stripped before matching. IPv6 addresses ending in :: could not be connected to at all, as the nodename became host:::port and failed name resolution. In the remaining cases, a bare IPv4 or IPv6 literal on OpenSSL >= 3.0, the iPAddress entry was already used, and behaviour is unchanged.
- 
- 
- ## Security considerations
 diff --git a/STATISTICS.md b/STATISTICS.md
 index 13c863c4..db2cb437 100644
 --- a/STATISTICS.md
 +++ b/STATISTICS.md
 @@ -81,9 +81,9 @@ Per broker statistics.
- 
+
  Field | Type | Example | Description
  ----- | ---- | ------- | -----------
 -name | string | `"example.com:9092/13"` | Broker hostname, port and broker id. An IPv6 address is enclosed in brackets per RFC 3986 (`"[::1]:9092/13"`)
@@ -111,12 +70,12 @@ index 7e8bd51a..d8e5c48e 100644
 -                *t = '\0';
 +        rd_snprintf(dest, dsize, "%s:%hu", name, port);
  }
- 
+
  /**
 @@ -6764,107 +6719,6 @@ static int rd_ut_ApiVersion_at_least(void) {
          RD_UT_PASS();
  }
- 
+
 -/**
 - * @brief Unittest for broker nodename construction.
 - *
@@ -222,12 +181,12 @@ index 7e8bd51a..d8e5c48e 100644
   * @name Unit tests
   * @{
 @@ -6875,8 +6729,6 @@ int unittest_broker(void) {
- 
+
          fails += rd_ut_reconnect_backoff();
          fails += rd_ut_ApiVersion_at_least();
 -        fails += rd_ut_mk_nodename();
 -        fails += rd_ut_nodename_to_hostname();
- 
+
          return fails;
  }
 diff --git a/src/rdkafka_broker.h b/src/rdkafka_broker.h
@@ -237,14 +196,14 @@ index 1fa996e3..a0881501 100644
 @@ -713,10 +713,6 @@ rd_kafka_broker_t *rd_kafka_broker_add_logical(rd_kafka_t *rk,
  void rd_kafka_broker_set_nodename(rd_kafka_broker_t *rkb,
                                    rd_kafka_broker_t *from_rkb);
- 
+
 -void rd_kafka_nodename_to_hostname(const char *nodename,
 -                                   char *dest,
 -                                   size_t dsize);
 -
  void rd_kafka_broker_connect_up(rd_kafka_broker_t *rkb);
  void rd_kafka_broker_connect_done(rd_kafka_broker_t *rkb, const char *errstr);
- 
+
 diff --git a/src/rdkafka_sasl.c b/src/rdkafka_sasl.c
 index a821a431..aab16f6d 100644
 --- a/src/rdkafka_sasl.c
@@ -257,16 +216,16 @@ index a821a431..aab16f6d 100644
 +        char *hostname, *t;
          const struct rd_kafka_sasl_provider *provider =
              rk->rk_conf.sasl.provider;
- 
+
 @@ -263,10 +263,12 @@ int rd_kafka_sasl_client_new(rd_kafka_transport_t *rktrans,
          }
- 
+
          rd_kafka_broker_lock(rktrans->rktrans_rkb);
 -        rd_kafka_nodename_to_hostname(rktrans->rktrans_rkb->rkb_nodename,
 -                                      hostname, sizeof(hostname));
 +        rd_strdupa(&hostname, rktrans->rktrans_rkb->rkb_nodename);
          rd_kafka_broker_unlock(rktrans->rktrans_rkb);
- 
+
 +        if ((t = strchr(hostname, ':')))
 +                *t = '\0'; /* remove ":port" */
 +
@@ -300,7 +259,7 @@ index 42b4780d..fccb9d3f 100644
 +        rd_snprintf(name, sizeof(name), "%s",
 +                    rktrans->rktrans_rkb->rkb_nodename);
          rd_kafka_broker_unlock(rktrans->rktrans_rkb);
- 
+
 +        /* Remove ":9092" port suffix from nodename */
 +        if ((t = strrchr(name, ':')))
 +                *t = '\0';
@@ -309,7 +268,7 @@ index 42b4780d..fccb9d3f 100644
           * verification */
          rd_kafka_ssl_normalize_hostname(name, name_for_verify,
                                          sizeof(name_for_verify));
- 
+
 -        /* Is this a numerical address rather than a hostname?
 -         * An IP literal must not be sent as SNI (RFC 6066) and must be
 -         * verified against the certificate's iPAddress entries rather than its
@@ -337,7 +296,7 @@ index 42b4780d..fccb9d3f 100644
 @@ -544,42 +534,19 @@ static int rd_kafka_transport_ssl_set_endpoint_id(rd_kafka_transport_t *rktrans,
                             name, name_for_verify);
          }
- 
+
 -#if OPENSSL_VERSION_NUMBER >= 0x1000200fL /* 1.0.2 */
 +#if OPENSSL_VERSION_NUMBER >= 0x10100000 && !defined(OPENSSL_IS_BORINGSSL)
 +        if (!SSL_set1_host(rktrans->rktrans_ssl, name_for_verify))
@@ -345,9 +304,9 @@ index 42b4780d..fccb9d3f 100644
 +#elif OPENSSL_VERSION_NUMBER >= 0x1000200fL /* 1.0.2 */
          {
                  X509_VERIFY_PARAM *param;
- 
+
                  param = SSL_get0_param(rktrans->rktrans_ssl);
- 
+
 -                /* Match an IP literal against the certificate's iPAddress
 -                 * entries and a hostname against its dNSName entries.
 -                 *
@@ -387,15 +346,15 @@ index 42b4780d..fccb9d3f 100644
          rd_snprintf(errstr, errstr_size,
 @@ -590,8 +557,8 @@ static int rd_kafka_transport_ssl_set_endpoint_id(rd_kafka_transport_t *rktrans,
  #endif
- 
+
          rd_rkb_dbg(rktrans->rktrans_rkb, SECURITY, "ENDPOINT",
 -                   "Enabled endpoint identification using %s %s",
 -                   is_ip_literal ? "address" : "hostname", name_for_verify);
 +                   "Enabled endpoint identification using hostname %s",
 +                   name_for_verify);
- 
+
          return 0;
- 
+
 diff --git a/tests/0191-ipv6_nodename_mock.c b/tests/0191-ipv6_nodename_mock.c
 deleted file mode 100644
 index 3486c06e..00000000
@@ -681,60 +640,3 @@ index 3486c06e..00000000
 -
 -        return 0;
 -}
-diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
-index fc4fdd54..5fe3e321 100644
---- a/tests/CMakeLists.txt
-+++ b/tests/CMakeLists.txt
-@@ -167,7 +167,6 @@ set(
-     0186-share_consumer_fatal_error.c
-     0187-legacy_msgset_fetch_mock.c
-     0190-share_consumer_telemetry.c
--    0191-ipv6_nodename_mock.c
-     8000-idle.cpp
-     8001-fetch_from_follower_mock_manual.c
-     test.c
-diff --git a/tests/LibrdkafkaTestApp.py b/tests/LibrdkafkaTestApp.py
-index 95556d9d..4a9816b7 100644
---- a/tests/LibrdkafkaTestApp.py
-+++ b/tests/LibrdkafkaTestApp.py
-@@ -36,6 +36,7 @@ class LibrdkafkaTestApp(App):
-         self.security_protocol = 'PLAINTEXT'
- 
-         f, self.test_conf_file = self.open_file('test.conf', 'perm')
-+        f.write('broker.address.family=v4\n'.encode('ascii'))
-         f.write(('test.sql.command=sqlite3 rdktests\n').encode('ascii'))
-         f.write('test.timeout.multiplier=2\n'.encode('ascii'))
- 
-diff --git a/tests/test.c b/tests/test.c
-index 9a4380cb..24947655 100644
---- a/tests/test.c
-+++ b/tests/test.c
-@@ -315,7 +315,6 @@ _TEST_DECL(0185_share_consumer_max_poll_interval);
- _TEST_DECL(0186_share_consumer_fatal_error);
- _TEST_DECL(0187_legacy_msgset_fetch_mock);
- _TEST_DECL(0190_share_consumer_telemetry);
--_TEST_DECL(0191_ipv6_nodename_mock);
- 
- /* Manual tests */
- _TEST_DECL(8000_idle);
-@@ -615,7 +614,6 @@ struct test tests[] = {
-     _TEST(0190_share_consumer_telemetry,
-           TEST_F_MANUAL,
-           TEST_BRKVER(4, 2, 0, 0)),
--    _TEST(0191_ipv6_nodename_mock, TEST_F_LOCAL),
- 
-     /* Manual tests */
-     _TEST(8000_idle, TEST_F_MANUAL),
-diff --git a/win32/tests/tests.vcxproj b/win32/tests/tests.vcxproj
-index 37bd24b0..1e8f7dfa 100644
---- a/win32/tests/tests.vcxproj
-+++ b/win32/tests/tests.vcxproj
-@@ -260,7 +260,6 @@
-     <ClCompile Include="..\..\tests\0186-share_consumer_fatal_error.c" />
-     <ClCompile Include="..\..\tests\0187-legacy_msgset_fetch_mock.c" />
-     <ClCompile Include="..\..\tests\0190-share_consumer_telemetry.c" />
--    <ClCompile Include="..\..\tests\0191-ipv6_nodename_mock.c" />
-     <ClCompile Include="..\..\tests\8000-idle.cpp" />
-     <ClCompile Include="..\..\tests\8001-fetch_from_follower_mock_manual.c" />
-     <ClCompile Include="..\..\tests\test.c" />
-
