@@ -237,6 +237,13 @@ function Consumer:seek_partitions(topic_partitions_list, options)
     return self._consumer:seek_partitions(topic_partitions_list, timeout_ms)
 end
 
+function Consumer:fatal_error()
+    if self._consumer == nil then
+        return
+    end
+    return self._consumer:fatal_error()
+end
+
 function Consumer:dump_conf()
     if self._consumer == nil then
         return
@@ -416,6 +423,13 @@ function Producer:produce(msg)
     end
 
     return err
+end
+
+function Producer:fatal_error()
+    if self._producer == nil then
+        return
+    end
+    return self._producer:fatal_error()
 end
 
 function Producer:dump_conf()

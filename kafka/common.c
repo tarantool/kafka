@@ -42,6 +42,15 @@ lua_librdkafka_version(struct lua_State *L) {
 }
 
 int
+lua_librdkafka_fatal_error(struct lua_State *L, rd_kafka_t *rk) {
+    char reason[512];
+    if (rk == NULL || rd_kafka_fatal_error(rk, reason, sizeof(reason)) == RD_KAFKA_RESP_ERR_NO_ERROR)
+        return 0;
+    lua_pushstring(L, reason);
+    return 1;
+}
+
+int
 lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk) {
     if (rk != NULL) {
         const rd_kafka_conf_t *conf = rd_kafka_conf(rk);
