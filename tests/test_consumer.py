@@ -602,3 +602,9 @@ def test_offsets_for_times_seek_from_cut():
 
         assert values.issuperset(want), f"missing: {want - values}, got={values}"
         assert values.isdisjoint(not_want), f"unexpected (batch1) values present: {values & not_want}"
+
+
+@pytest.mark.parametrize("with_callback", [True, False])
+def test_consumer_fatal_error(with_callback):
+    server = get_server()
+    server.call("consumer.test_fatal_error", [with_callback])

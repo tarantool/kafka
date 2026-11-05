@@ -33,6 +33,9 @@ int
 lua_producer_destroy(struct lua_State *L);
 
 int
+lua_producer_fatal_error(struct lua_State *L);
+
+int
 lua_producer_dump_conf(struct lua_State *L);
 
 int

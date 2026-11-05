@@ -145,7 +145,12 @@ local function test_create_errors()
     assert(err == '`reconnect.backoff.max.ms` must be >= `reconnect.backoff.ms`')
 end
 
+local function test_fatal_error(with_callback)
+    require('tests.helpers').test_fatal_error('producer', tnt_kafka.Producer, with_callback)
+end
+
 return {
+    test_fatal_error = test_fatal_error,
     create = create,
     produce = produce,
     get_errors = get_errors,

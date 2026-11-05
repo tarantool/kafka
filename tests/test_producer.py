@@ -5,6 +5,7 @@ import asyncio
 
 from aiokafka import AIOKafkaConsumer
 import tarantool
+import pytest
 
 KAFKA_HOST = os.getenv("KAFKA_HOST", "kafka:9092")
 
@@ -181,3 +182,9 @@ def test_producer_should_log_debug():
 def test_producer_create_errors():
     server = get_server()
     server.call("producer.test_create_errors")
+
+
+@pytest.mark.parametrize("with_callback", [True, False])
+def test_producer_fatal_error(with_callback):
+    server = get_server()
+    server.call("producer.test_fatal_error", [with_callback])

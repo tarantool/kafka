@@ -117,7 +117,8 @@ push_stats_cb_args(struct lua_State *L, const char *msg) {
 int
 push_errors_cb_args(struct lua_State *L, const error_msg_t *msg) {
     lua_pushstring(L, msg->reason);
-    return 1;
+    lua_pushinteger(L, msg->err);
+    return 2;
 }
 
 /**

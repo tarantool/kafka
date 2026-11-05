@@ -56,6 +56,9 @@ int
 lua_librdkafka_version(struct lua_State *L);
 
 int
+lua_librdkafka_fatal_error(struct lua_State *L, rd_kafka_t *rk);
+
+int
 lua_librdkafka_dump_conf(struct lua_State *L, rd_kafka_t *rk);
 
 int

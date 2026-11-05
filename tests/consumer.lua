@@ -323,7 +323,12 @@ local function seek_from_time(topic, ts_ms, timeout_ms)
     return seeks
  end
 
+local function test_fatal_error(with_callback)
+    require('tests.helpers').test_fatal_error('consumer', tnt_kafka.Consumer, with_callback)
+end
+
 return {
+    test_fatal_error = test_fatal_error,
     create = create,
     subscribe = subscribe,
     unsubscribe = unsubscribe,

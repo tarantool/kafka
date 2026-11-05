@@ -706,6 +706,13 @@ topic_error:
 }
 
 int
+lua_consumer_fatal_error(struct lua_State *L) {
+    consumer_t **consumer_p = luaL_checkudata(L, 1, consumer_label);
+    rd_kafka_t *rk = *consumer_p != NULL ? (*consumer_p)->rd_consumer : NULL;
+    return lua_librdkafka_fatal_error(L, rk);
+}
+
+int
 lua_consumer_dump_conf(struct lua_State *L) {
     consumer_t **consumer_p = (consumer_t **)luaL_checkudata(L, 1, consumer_label);
     if (consumer_p == NULL || *consumer_p == NULL)
